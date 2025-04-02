@@ -1,0 +1,70 @@
+{
+  "rules" : {
+    "NoAccessLevelOnExtensionDeclaration" : true,
+    "NoVoidReturnOnFunctionSignature" : true,
+    "AllPublicDeclarationsHaveDocumentation" : false,
+    "AmbiguousTrailingClosureOverload" : true,
+    "AlwaysUseLiteralForEmptyCollectionInit" : false,
+    "NoBlockComments" : true,
+    "UseExplicitNilCheckInConditions" : true,
+    "NeverUseImplicitlyUnwrappedOptionals" : false,
+    "ReplaceForEachWithForLoop" : true,
+    "UseSynthesizedInitializer" : true,
+    "OneCasePerLine" : true,
+    "GroupNumericLiterals" : true,
+    "FullyIndirectEnum" : true,
+    "IdentifiersMustBeASCII" : true,
+    "DontRepeatTypeInStaticProperties" : true,
+    "DoNotUseSemicolons" : true,
+    "NoAssignmentInExpressions" : true,
+    "NoParensAroundConditions" : true,
+    "OnlyOneTrailingClosureArgument" : true,
+    "TypeNamesShouldBeCapitalized" : true,
+    "AlwaysUseLowerCamelCase" : true,
+    "NoEmptyTrailingClosureParentheses" : true,
+    "NoPlaygroundLiterals" : true,
+    "ValidateDocumentationComments" : false,
+    "UseTripleSlashForDocumentationComments" : true,
+    "OmitExplicitReturns" : false,
+    "UseWhereClausesInForLoops" : false,
+    "NoLabelsInCasePatterns" : true,
+    "FileScopedDeclarationPrivacy" : true,
+    "BeginDocumentationCommentWithOneLineSummary" : false,
+    "NeverUseForceTry" : false,
+    "UseEarlyExits" : false,
+    "ReturnVoidInsteadOfEmptyTuple" : true,
+    "OrderedImports" : true,
+    "NoCasesWithOnlyFallthrough" : true,
+    "OneVariableDeclarationPerLine" : true,
+    "NeverForceUnwrap" : false,
+    "UseShorthandTypeNames" : true,
+    "UseLetInEveryBoundCaseVariable" : true,
+    "NoLeadingUnderscores" : false,
+    "UseSingleLinePropertyGetter" : true
+  },
+  "fileScopedDeclarationPrivacy" : {
+    "accessLevel" : "private"
+  },
+  "indentation" : {
+    "spaces" : 2
+  },
+  "lineBreakAroundMultilineExpressionChainComponents" : false,
+  "version" : 1,
+  "noAssignmentInExpressions" : {
+    "allowedFunctions" : [
+      "XCTAssertNoThrow"
+    ]
+  },
+  "lineBreakBeforeControlFlowKeywords" : false,
+  "lineLength" : 100,
+  "lineBreakBeforeEachGenericRequirement" : false,
+  "lineBreakBeforeEachArgument" : false,
+  "indentConditionalCompilationBlocks" : true,
+  "tabWidth" : 8,
+  "maximumBlankLines" : 1,
+  "spacesAroundRangeFormationOperators" : false,
+  "multiElementCollectionTrailingCommas" : true,
+  "indentSwitchCaseLabels" : false,
+  "prioritizeKeepingFunctionOutputTogether" : false,
+  "respectsExistingLineBreaks" : true
+}
