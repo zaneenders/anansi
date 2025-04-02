@@ -7,7 +7,30 @@ struct AnansiTests {
   @Test
   func basic() async throws {
     var anansi = Anansi()
-    try await anansi.view(url: "https://zaneenders.com")
+    // try await anansi.view(url: "https://zaneenders.com")
+  }
+
+  @Test
+  func htmlStartTagTest() {
+    let html_contents = """
+      <!DOCTYPE html>
+      <html lang="en">
+      """
+    let doc = Document(parsing: html_contents)
+    let expected: [Document.Nodes] = [.DOCTYPE, .html(.start)]
+    #expect(doc.elements == expected)
+  }
+
+  @Test
+  func htmlEndTagTest() {
+    let html_contents = """
+      <!DOCTYPE html>
+      <html lang="en">
+      </html>
+      """
+    let doc = Document(parsing: html_contents)
+    let expected: [Document.Nodes] = [.DOCTYPE, .html(.start), .html(.end)]
+    #expect(doc.elements == expected)
   }
 
   @Test
@@ -24,13 +47,13 @@ struct AnansiTests {
       	<link href="css/style.css" rel="stylesheet" />
       </head>
       <body>
-
-      	<script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+        Zane was Here ->
       </body>
       </html>
       """
     let doc = Document(parsing: html_string)
-    let expected: [Document.Nodes] = [.DOCTYPE]
+    let expected: [Document.Nodes] = [.DOCTYPE, .html(.start), .head, .html(.end)]
+    print(doc.elements)
     #expect(doc.elements == expected)
   }
 }
