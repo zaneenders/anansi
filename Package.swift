@@ -19,11 +19,15 @@ let package = Package(
       from: "1.3.1"),
   ],
   targets: [
+    // MARK: targets
     .target(
       name: "Anansi",
       dependencies: [
         .product(name: "HTTPTypes", package: "swift-http-types"),
         .product(name: "AsyncHTTPClient", package: "async-http-client"),
-      ])
+      ]
+    ),
+    // MARK: test targets
+    .testTarget(name: "AnansiTests", dependencies: ["Anansi"]),
   ]
 )
