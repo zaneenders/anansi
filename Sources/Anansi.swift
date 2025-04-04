@@ -35,6 +35,7 @@ extension Document {
     case DOCTYPE
     case head
     case html(HTML)
+    case script
   }
 
   enum HTML: Equatable {
@@ -48,15 +49,9 @@ struct Document {
   private(set) public var elements: [Document.Nodes] = []
   init(parsing contents: String) {
     let doc_element = Regex {
-      ZeroOrMore {
-        .whitespace
-      }
       "<!DOCTYPE html>"
-      ZeroOrMore {
-        .whitespace
-      }
     }
-    if let match = contents.prefixMatch(of: doc_element) {
+    if let match = contents.firstMatch(of: doc_element) {
       elements.append(.DOCTYPE)
       let next = String(contents[match.endIndex..<contents.endIndex])
       print("NEXT: \(next)")
@@ -68,29 +63,17 @@ struct Document {
     // Could use jsut firstMatch instead of the whitespace.. IDK
     print("\(#function): \(contents)")
     let html_start_tag = Regex {
-      ZeroOrMore {
-        .whitespace
-      }
       "<html"
       Capture {
         ZeroOrMore(.any, .reluctant)
       }
       ">"
-      ZeroOrMore {
-        .whitespace
-      }
     }
     let html_end_tag = Regex {
-      ZeroOrMore {
-        .whitespace
-      }
       "</html>"
-      ZeroOrMore {
-        .whitespace
-      }
     }
     do {
-      guard let start = try html_start_tag.prefixMatch(in: contents) else {
+      guard let start = try html_start_tag.firstMatch(in: contents) else {
         return
       }
       elements.append(.html(.start))
@@ -108,7 +91,6 @@ struct Document {
   mutating func parseHTMLBody(_ contents: String) {
     let head_element = Regex {
       "<head>"
-      // TODO parse contents
       Capture {
         ZeroOrMore(.any, .reluctant)
       }
@@ -123,10 +105,57 @@ struct Document {
       print("iDK: \(error)")
       return
     }
+    parseStrictTag(contents)
   }
 
   mutating func parseHeadContents(_ contents: String) {
     print("HEAD: \(contents)")
+  }
+
+  mutating func parseStrictTag(_ contents: String) {
+    let head_element = Regex {
+      "<script"
+      Capture {
+        ZeroOrMore(.any, .reluctant)
+      }
+      ">"
+      Capture {
+        ZeroOrMore(.any, .reluctant)
+      }
+      "</script>"
+    }
+    do {
+      if let match = try head_element.firstMatch(in: contents) {
+        elements.append(.script)
+        parserAttributes(String(match.1))
+        print(String(match.2))
+      }
+    } catch {
+      print("iDK: \(error)")
+      return
+    }
+  }
+
+  mutating func parserAttributes(_ contents: String) {
+
+    let head_element = Regex {
+      """
+      src="
+      """
+      Capture {
+        ZeroOrMore(.any, .reluctant)
+      }
+      """
+      "
+      """
+    }
+    do {
+      if let match = try head_element.firstMatch(in: contents) {
+        print(String(match.1))
+      }
+    } catch {
+      print(error.localizedDescription)
+    }
   }
 }
 

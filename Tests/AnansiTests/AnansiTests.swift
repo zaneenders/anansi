@@ -46,13 +46,14 @@ struct AnansiTests {
       	<title></title>
       	<link href="css/style.css" rel="stylesheet" />
       </head>
+      <script src="/htmx.min.js"></script>
       <body>
         Zane was Here ->
       </body>
       </html>
       """
     let doc = Document(parsing: html_string)
-    let expected: [Document.Nodes] = [.DOCTYPE, .html(.start), .head, .html(.end)]
+    let expected: [Document.Nodes] = [.DOCTYPE, .html(.start), .head, .script, .html(.end)]
     print(doc.elements)
     #expect(doc.elements == expected)
   }
