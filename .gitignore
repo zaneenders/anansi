@@ -5,6 +5,6 @@
 # Swift Package Manger
 /.swiftpm
 Package.resolved
-# VS Code generated files
-/.vscode
+# Other
+.env
 

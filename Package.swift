@@ -17,9 +17,11 @@ let package = Package(
     .package(
       url: "git@github.com:apple/swift-http-types.git",
       from: "1.3.1"),
+    .package(
+      url: "https://github.com/apple/swift-configuration", from: "0.2.0"),
+    .package(url: "https://github.com/apple/swift-nio.git", from: "2.8.8"),
   ],
   targets: [
-    // MARK: targets
     .target(
       name: "Anansi",
       dependencies: [
@@ -27,7 +29,13 @@ let package = Package(
         .product(name: "AsyncHTTPClient", package: "async-http-client"),
       ]
     ),
-    // MARK: test targets
-    .testTarget(name: "AnansiTests", dependencies: ["Anansi"]),
+    .testTarget(
+      name: "AnansiTests",
+      dependencies: [
+        "Anansi",
+        .product(name: "_NIOFileSystem", package: "swift-nio"),
+        .product(name: "Configuration", package: "swift-configuration"),
+        .product(name: "AsyncHTTPClient", package: "async-http-client"),
+      ]),
   ]
 )
