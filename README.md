@@ -2,4 +2,5 @@
 
 ```.env
 GEMINI_API_KEY=...
+OLLAMA_ENDPOINT=http://localhost:11434/
 ```

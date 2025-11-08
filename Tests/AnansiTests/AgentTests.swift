@@ -8,15 +8,30 @@ import Testing
 @Suite
 struct AgentTests {
   @Test func geminiHello() async {
-    await gemini()
+    let config = try! await ConfigReader(
+      provider: EnvironmentVariablesProvider(environmentFilePath: ".env"))
+    guard let geminiKey = config.string(forKey: "GEMINI_API_KEY") else {
+      print("GEMINI_API_KEY not found")
+      return
+    }
+    print(geminiKey)
+    await gemini(geminiKey)
   }
 
   @Test func ollamaTool() async {
-    await ollama()
+    let config = try! await ConfigReader(
+      provider: EnvironmentVariablesProvider(environmentFilePath: ".env"))
+    guard let ollamaEndpoint = config.string(forKey: "OLLAMA_ENDPOINT") else {
+      print("OLLAMA_ENDPOINT not found")
+      return
+    }
+    print(ollamaEndpoint)
+    await ollama(ollamaEndpoint)
   }
 }
 
-func ollama() async {
+func ollama(_ ollamaEndpoint: String) async {
+  let chatURL = "\(ollamaEndpoint)/api/chat"
   let encoder = JSONEncoder()
   let decoder = JSONDecoder()
   do {
@@ -62,12 +77,18 @@ func ollama() async {
     let data = try encoder.encode(message)
     let bytes = ByteBuffer(bytes: data)
     print("Messages: \(chat.count), bytes:\(bytes.readableBytes)")
-    var request = HTTPClientRequest(url: "http://192.168.1.177:11434/api/chat")
+    var request = HTTPClientRequest(url: chatURL)
     request.method = .POST
+    request.headers.add(name: "Content-Type", value: "application/json")
     request.body = .bytes(bytes)
     let response = try await HTTPClient.shared.execute(request, timeout: .seconds(30))
     let body = try await response.body.collect(upTo: .max)
     let jsonString = String(buffer: body)
+    guard response.status == .ok else {
+      print("HTTP Error: \(response.status)")
+      print("Response body: \(jsonString)")
+      return
+    }
 
     // Parse the NDJSON response
     let lines = jsonString.split(separator: "\n", omittingEmptySubsequences: true)
@@ -116,13 +137,19 @@ func ollama() async {
       let followUpMessage = OllamaChatRequest(model: "\(model)", messages: chat, tools: tools)
       let followUpData = try encoder.encode(followUpMessage)
       let followUpBytes = ByteBuffer(bytes: followUpData)
-      var followUpRequest = HTTPClientRequest(url: "http://localhost:11434/api/chat")
+      var followUpRequest = HTTPClientRequest(url: chatURL)
       followUpRequest.method = .POST
+      followUpRequest.headers.add(name: "Content-Type", value: "application/json")
       followUpRequest.body = .bytes(followUpBytes)
       let followUpResponse = try await HTTPClient.shared.execute(
         followUpRequest, timeout: .seconds(30))
       let followUpBody = try await followUpResponse.body.collect(upTo: .max)
       let followUpJson = String(buffer: followUpBody)
+      guard followUpResponse.status == .ok else {
+        print("HTTP Error in follow-up: \(followUpResponse.status)")
+        print("Response body: \(followUpJson)")
+        return
+      }
 
       let followUpLines = followUpJson.split(separator: "\n", omittingEmptySubsequences: true)
       var finalAnswer = ""
@@ -173,14 +200,7 @@ private func evaluateSimpleExpression(_ expr: String) -> Double? {
   return expression.expressionValue(with: nil, context: nil) as? Double
 }
 
-func gemini() async {
-  let config = try! await ConfigReader(
-    provider: EnvironmentVariablesProvider(environmentFilePath: ".env"))
-  guard let geminiKey = config.string(forKey: "GEMINI_API_KEY") else {
-    print("GEMINI_API_KEY not found")
-    return
-  }
-  print(geminiKey)
+func gemini(_ geminiKey: String) async {
   var req = HTTPClientRequest(
     url:
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=\(geminiKey)"
