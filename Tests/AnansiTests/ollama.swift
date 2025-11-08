@@ -1,8 +1,19 @@
 import AsyncHTTPClient
 import Foundation
 import NIOCore
+import NIOFileSystem
+import Subprocess
 
-func ollama(_ ollamaEndpoint: String) async {
+public func listDirectory() async throws -> String {
+  do {
+    let result = try await run(.name("ls"), output: .string(limit: 4096))
+    return result.standardOutput ?? ""
+  } catch {
+    throw error
+  }
+}
+
+func ollama(_ ollamaEndpoint: String, userMessage: String = "What is 420 + 69?") async {
   let chatURL = "\(ollamaEndpoint)/api/chat"
   let encoder = JSONEncoder()
   let decoder = JSONDecoder()
@@ -29,7 +40,36 @@ func ollama(_ ollamaEndpoint: String) async {
             required: ["expression"]
           )
         )
-      )
+      ),
+      OllamaTool(
+        type: "function",
+        function: OllamaFunction(
+          name: "read_file",
+          description: "Read the contents of a file",
+          parameters: OllamaParameters(
+            type: "object",
+            properties: [
+              "file_path": OllamaProperty(
+                type: "string",
+                description: "The absolue or relative path to the file"
+              )
+            ],
+            required: ["file_path"]
+          )
+        )
+      ),
+      OllamaTool(
+        type: "function",
+        function: OllamaFunction(
+          name: "list_directory",
+          description: "List the contents of the current directory",
+          parameters: OllamaParameters(
+            type: "object",
+            properties: [:],
+            required: []
+          )
+        )
+      ),
     ]
 
     chat.append(
@@ -42,9 +82,21 @@ func ollama(_ ollamaEndpoint: String) async {
       OllamaMessage(
         role: "system",
         content:
+          "When asked to list files in the directory, use the list_directory tool."
+      ))
+    chat.append(
+      OllamaMessage(
+        role: "system",
+        content:
           "When asked to perform calculations, use the calculate tool."
       ))
-    chat.append(OllamaMessage(role: "user", content: "What is 420 + 69?"))
+    chat.append(
+      OllamaMessage(
+        role: "system",
+        content:
+          "When asked to read files, use the read_file tool."
+      ))
+    chat.append(OllamaMessage(role: "user", content: userMessage))
     let message = OllamaChatRequest(model: "\(model)", messages: chat, tools: tools)
     let data = try encoder.encode(message)
     let bytes = ByteBuffer(bytes: data)
@@ -153,6 +205,25 @@ private func executeTool(_ toolCall: OllamaToolCall) async -> String {
     }
     let result = calculate(expression: expression)
     return "Result: \(result)"
+  case "read_file":
+    guard let filePath = toolCall.function.arguments["file_path"] else {
+      return "Missing file_path in arguments"
+    }
+    do {
+      print(FileManager.default.currentDirectoryPath)
+      let data = try Data(contentsOf: URL(fileURLWithPath: filePath))
+      let content = String(data: data, encoding: .utf8) ?? "Failed to decode as UTF-8"
+      return content
+    } catch {
+      return "Error reading file: \(error.localizedDescription)"
+    }
+  case "list_directory":
+    do {
+      let result = try await listDirectory()
+      return result
+    } catch {
+      return "Error listing directory: \(error.localizedDescription)"
+    }
   default:
     return "Unknown tool: \(toolCall.function.name)"
   }

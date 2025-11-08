@@ -28,4 +28,15 @@ struct AgentTests {
     print(ollamaEndpoint)
     await ollama(ollamaEndpoint)
   }
+
+  @Test func ollamaReadFile() async {
+    let config = try! await ConfigReader(
+      provider: EnvironmentVariablesProvider(environmentFilePath: ".env"))
+    guard let ollamaEndpoint = config.string(forKey: "OLLAMA_ENDPOINT") else {
+      print("OLLAMA_ENDPOINT not found")
+      return
+    }
+    await ollama(
+      ollamaEndpoint, userMessage: "can you tell me about the contents of the current directory")
+  }
 }

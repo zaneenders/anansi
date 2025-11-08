@@ -1,11 +1,11 @@
-// swift-tools-version: 6.1
+// swift-tools-version: 6.2
 
 import PackageDescription
 
 let package = Package(
   name: "anansi",
   platforms: [
-    .macOS("15.0")
+    .macOS("26.0")
   ],
   products: [
     .library(name: "Anansi", targets: ["Anansi"])
@@ -20,6 +20,7 @@ let package = Package(
     .package(
       url: "https://github.com/apple/swift-configuration", from: "0.2.0"),
     .package(url: "https://github.com/apple/swift-nio.git", from: "2.8.8"),
+    .package(url: "https://github.com/swiftlang/swift-subprocess.git", from: "0.2.1"),
   ],
   targets: [
     .target(
@@ -27,6 +28,7 @@ let package = Package(
       dependencies: [
         .product(name: "HTTPTypes", package: "swift-http-types"),
         .product(name: "AsyncHTTPClient", package: "async-http-client"),
+        .product(name: "Subprocess", package: "swift-subprocess"),
       ]
     ),
     .testTarget(
