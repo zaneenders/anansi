@@ -35,6 +35,8 @@ let package = Package(
       name: "AnansiTests",
       dependencies: [
         "Anansi",
+        .product(name: "NIOCore", package: "swift-nio"),
+        .product(name: "_NIOFileSystemFoundationCompat", package: "swift-nio"),
         .product(name: "_NIOFileSystem", package: "swift-nio"),
         .product(name: "Configuration", package: "swift-configuration"),
         .product(name: "AsyncHTTPClient", package: "async-http-client"),

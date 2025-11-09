@@ -1,6 +1,7 @@
 import AsyncHTTPClient
 import Foundation
 import NIOCore
+import _NIOFileSystemFoundationCompat
 
 func gemini(_ geminiKey: String) async {
   var req = HTTPClientRequest(
