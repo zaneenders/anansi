@@ -13,89 +13,63 @@ public func listDirectory() async throws -> String {
   }
 }
 
-func ollama(_ ollamaEndpoint: String, userMessage: String = "What is 420 + 69?") async {
+let tools = [
+  OllamaTool(
+    type: "function",
+    function: OllamaFunction(
+      name: "read_file",
+      description: "Read the contents of a file",
+      parameters: OllamaParameters(
+        type: "object",
+        properties: [
+          "file_path": OllamaProperty(
+            type: "string",
+            description: "The absolue or relative path to the file to read the contents of"
+          )
+        ],
+        required: ["file_path"]
+      )
+    )
+  ),
+  OllamaTool(
+    type: "function",
+    function: OllamaFunction(
+      name: "list_directory",
+      description: "List the contents of the current directory",
+      parameters: OllamaParameters(
+        type: "object",
+        properties: [:],
+        required: []
+      )
+    )
+  ),
+]
+
+func ollama(_ ollamaEndpoint: String, userMessage: String) async {
   let chatURL = "\(ollamaEndpoint)/api/chat"
   let encoder = JSONEncoder()
   let decoder = JSONDecoder()
   do {
     var chat: [OllamaMessage] = []
     let model: OllamaModel = .llama(.llama3_1_8b)
-    print(" \(model), inputs: \(model.inputs)")
-
-    // Define available tools
-    let tools = [
-      OllamaTool(
-        type: "function",
-        function: OllamaFunction(
-          name: "calculate",
-          description: "Perform basic arithmetic calculations",
-          parameters: OllamaParameters(
-            type: "object",
-            properties: [
-              "expression": OllamaProperty(
-                type: "string",
-                description: "The mathematical expression to evaluate (e.g., '2 + 3 * 4')"
-              )
-            ],
-            required: ["expression"]
-          )
-        )
-      ),
-      OllamaTool(
-        type: "function",
-        function: OllamaFunction(
-          name: "read_file",
-          description: "Read the contents of a file",
-          parameters: OllamaParameters(
-            type: "object",
-            properties: [
-              "file_path": OllamaProperty(
-                type: "string",
-                description: "The absolue or relative path to the file"
-              )
-            ],
-            required: ["file_path"]
-          )
-        )
-      ),
-      OllamaTool(
-        type: "function",
-        function: OllamaFunction(
-          name: "list_directory",
-          description: "List the contents of the current directory",
-          parameters: OllamaParameters(
-            type: "object",
-            properties: [:],
-            required: []
-          )
-        )
-      ),
-    ]
 
     chat.append(
       OllamaMessage(
         role: "system",
         content:
-          "You are a helpful assistant with access to tools."
+          """
+          You are a helpful assistant with access to tools.
+
+          Tools: 
+          - list_directory 
+          - read_file
+
+          list_directory use when asked to list files in the directory.
+
+          read_file use When needed to read files.
+          """
       ))
-    chat.append(
-      OllamaMessage(
-        role: "system",
-        content:
-          "When asked to list files in the directory, use the list_directory tool."
-      ))
-    chat.append(
-      OllamaMessage(
-        role: "system",
-        content:
-          "When asked to perform calculations, use the calculate tool."
-      ))
-    chat.append(
-      OllamaMessage(
-        role: "system",
-        content:
-          "When asked to read files, use the read_file tool."
-      ))
+
     chat.append(OllamaMessage(role: "user", content: userMessage))
     let message = OllamaChatRequest(model: "\(model)", messages: chat, tools: tools)
     let data = try encoder.encode(message)
@@ -199,12 +173,6 @@ func ollama(_ ollamaEndpoint: String, userMessage: String = "What is 420 + 69?")
 
 private func executeTool(_ toolCall: OllamaToolCall) async -> String {
   switch toolCall.function.name {
-  case "calculate":
-    guard let expression = toolCall.function.arguments["expression"] else {
-      return "Missing expression in arguments"
-    }
-    let result = calculate(expression: expression)
-    return "Result: \(result)"
   case "read_file":
     guard let filePath = toolCall.function.arguments["file_path"] else {
       return "Missing file_path in arguments"
@@ -227,20 +195,6 @@ private func executeTool(_ toolCall: OllamaToolCall) async -> String {
   default:
     return "Unknown tool: \(toolCall.function.name)"
   }
-}
-
-private func calculate(expression: String) -> String {
-  let expr = expression.replacing(" ", with: "")
-  if let result = evaluateSimpleExpression(expr) {
-    return "\(result)"
-  } else {
-    return "Could not evaluate expression: \(expression)"
-  }
-}
-
-private func evaluateSimpleExpression(_ expr: String) -> Double? {
-  let expression = NSExpression(format: expr)
-  return expression.expressionValue(with: nil, context: nil) as? Double
 }
 
 struct OllamaChatResponse: Codable {
