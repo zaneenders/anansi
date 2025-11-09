@@ -49,58 +49,78 @@ func ollama(_ ollamaEndpoint: String, userMessage: String) async {
   let chatURL = "\(ollamaEndpoint)/api/chat"
   let encoder = JSONEncoder()
   let decoder = JSONDecoder()
+  var chat: [OllamaMessage] = []
+  let model: OllamaModel = .llama(.llama3_1_8b)
+
+  chat.append(
+    OllamaMessage(
+      role: "system",
+      content:
+        """
+        You are a helpful assistant with access to tools.
+
+        Tools: 
+        - list_directory 
+        - read_file
+
+        list_directory use when asked to list files in the directory.
+
+        read_file use When needed to read files.
+
+        Continue using tools as needed until you have completely answered the user's question. When you have provided a complete answer and no longer need to use tools, respond normally without making any tool calls.
+        """
+    ))
+
+  chat.append(OllamaMessage(role: "user", content: userMessage))
+
+  await recursiveChatLoop(
+    chatURL: chatURL, model: model, chat: &chat, encoder: encoder, decoder: decoder)
+}
+
+private func recursiveChatLoop(
+  chatURL: String,
+  model: OllamaModel,
+  chat: inout [OllamaMessage],
+  encoder: JSONEncoder,
+  decoder: JSONDecoder,
+  executedTools: Set<String> = Set<String>()
+) async {
   do {
-    var chat: [OllamaMessage] = []
-    let model: OllamaModel = .llama(.llama3_1_8b)
-
-    chat.append(
-      OllamaMessage(
-        role: "system",
-        content:
-          """
-          You are a helpful assistant with access to tools.
-
-          Tools: 
-          - list_directory 
-          - read_file
-
-          list_directory use when asked to list files in the directory.
-
-          read_file use When needed to read files.
-          """
-      ))
-
-    chat.append(OllamaMessage(role: "user", content: userMessage))
     let message = OllamaChatRequest(model: "\(model)", messages: chat, tools: tools)
     let data = try encoder.encode(message)
     let bytes = ByteBuffer(bytes: data)
     print("Messages: \(chat.count), bytes:\(bytes.readableBytes)")
+
     var request = HTTPClientRequest(url: chatURL)
     request.method = .POST
     request.headers.add(name: "Content-Type", value: "application/json")
     request.body = .bytes(bytes)
+
     let response = try await HTTPClient.shared.execute(request, timeout: .seconds(30))
     let body = try await response.body.collect(upTo: .max)
     let jsonString = String(buffer: body)
+
     guard response.status == .ok else {
       print("HTTP Error: \(response.status)")
       print("Response body: \(jsonString)")
       return
     }
 
-    // Parse the NDJSON response
     let lines = jsonString.split(separator: "\n", omittingEmptySubsequences: true)
     var accumulatedMessage: OllamaMessage?
-    var executedTools: Set<String> = []
+    var currentExecutedTools = executedTools
+
     for line in lines {
       let lineData = Data(line.utf8)
       let chatResponse = try decoder.decode(OllamaChatResponse.self, from: lineData)
       let content = chatResponse.message.content
+
       if accumulatedMessage == nil {
         accumulatedMessage = chatResponse.message
       } else {
         accumulatedMessage!.content += content
       }
+
       if let toolCalls = chatResponse.message.toolCalls {
         if accumulatedMessage?.toolCalls == nil {
           accumulatedMessage?.toolCalls = toolCalls
@@ -108,6 +128,7 @@ func ollama(_ ollamaEndpoint: String, userMessage: String) async {
           accumulatedMessage?.toolCalls?.append(contentsOf: toolCalls)
         }
       }
+
       if chatResponse.done {
         break
       }
@@ -118,56 +139,59 @@ func ollama(_ ollamaEndpoint: String, userMessage: String) async {
       return
     }
 
+    chat.append(finalMessage)
+
     if let toolCalls = finalMessage.toolCalls {
       print("Toolcall: \(toolCalls)")
-      for toolCall in toolCalls {
+
+      let pendingToolCalls = toolCalls.filter { toolCall in
         let key = "\(toolCall.function.name):\(toolCall.function.arguments)"
-        if !executedTools.contains(key) {
-          executedTools.insert(key)
-          print("🔧 Using tool: \(toolCall.function.name) with \(toolCall.function.arguments)")
-          let result = await executeTool(toolCall)
-          print("✅ Tool result: \(result)")
-          // Add tool response to chat
+        return !currentExecutedTools.contains(key)
+      }
+
+      if !pendingToolCalls.isEmpty {
+        let toolResults = await withTaskGroup(of: (toolCall: OllamaToolCall, result: String).self) {
+          group in
+          var results: [(toolCall: OllamaToolCall, result: String)] = []
+
+          for toolCall in pendingToolCalls {
+            group.addTask {
+              print("🔧 Using tool: \(toolCall.function.name) with \(toolCall.function.arguments)")
+              let result = await executeTool(toolCall)
+              print("✅ Tool result: \(result)")
+              return (toolCall: toolCall, result: result)
+            }
+          }
+
+          for await result in group {
+            results.append(result)
+          }
+
+          return results
+        }
+
+        for (toolCall, result) in toolResults {
+          let key = "\(toolCall.function.name):\(toolCall.function.arguments)"
+          currentExecutedTools.insert(key)
           chat.append(OllamaMessage(role: "tool", content: result, toolCallId: toolCall.id))
         }
-      }
 
-      let followUpMessage = OllamaChatRequest(model: "\(model)", messages: chat, tools: tools)
-      let followUpData = try encoder.encode(followUpMessage)
-      let followUpBytes = ByteBuffer(bytes: followUpData)
-      var followUpRequest = HTTPClientRequest(url: chatURL)
-      followUpRequest.method = .POST
-      followUpRequest.headers.add(name: "Content-Type", value: "application/json")
-      followUpRequest.body = .bytes(followUpBytes)
-      let followUpResponse = try await HTTPClient.shared.execute(
-        followUpRequest, timeout: .seconds(30))
-      let followUpBody = try await followUpResponse.body.collect(upTo: .max)
-      let followUpJson = String(buffer: followUpBody)
-      guard followUpResponse.status == .ok else {
-        print("HTTP Error in follow-up: \(followUpResponse.status)")
-        print("Response body: \(followUpJson)")
-        return
+        await recursiveChatLoop(
+          chatURL: chatURL,
+          model: model,
+          chat: &chat,
+          encoder: encoder,
+          decoder: decoder,
+          executedTools: currentExecutedTools
+        )
+      } else {
+        print(finalMessage.content)
       }
-
-      let followUpLines = followUpJson.split(separator: "\n", omittingEmptySubsequences: true)
-      var finalAnswer = ""
-      for line in followUpLines {
-        let lineData = Data(line.utf8)
-        let chatResponse = try decoder.decode(OllamaChatResponse.self, from: lineData)
-        let content = chatResponse.message.content
-        if !content.isEmpty {
-          finalAnswer += content
-        }
-        if chatResponse.done {
-          break
-        }
-      }
-      print(finalAnswer)
     } else {
-      print("No tool calls in response")
+      print(finalMessage.content)
     }
   } catch {
-    print("Erorr: \(error.localizedDescription)")
+    print("Error in recursive chat loop: \(error.localizedDescription)")
   }
 }
 
