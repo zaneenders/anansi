@@ -8,7 +8,8 @@ let package = Package(
     .macOS("26.0")
   ],
   products: [
-    .library(name: "Anansi", targets: ["Anansi"])
+    .library(name: "Anansi", targets: ["Anansi"]),
+    .executable(name: "anansi-chat", targets: ["AnansiChat"]),
   ],
   dependencies: [
     .package(
@@ -31,6 +32,16 @@ let package = Package(
         .product(name: "Subprocess", package: "swift-subprocess"),
       ]
     ),
+    .executableTarget(
+      name: "AnansiChat",
+      dependencies: [
+        "Anansi",
+        .product(name: "NIOCore", package: "swift-nio"),
+        .product(name: "_NIOFileSystemFoundationCompat", package: "swift-nio"),
+        .product(name: "_NIOFileSystem", package: "swift-nio"),
+        .product(name: "Configuration", package: "swift-configuration"),
+        .product(name: "AsyncHTTPClient", package: "async-http-client"),
+      ]),
     .testTarget(
       name: "AnansiTests",
       dependencies: [
