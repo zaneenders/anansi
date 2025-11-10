@@ -95,14 +95,49 @@ public struct OllamaToolCallFunction: Codable, Sendable {
   let arguments: [String: String]
 }
 
-public struct OllamaMessage: Codable, Sendable {
-  enum Role: Codable {
-    case system
-    case user
-    case assistant
-    case tool
+public enum Role: Codable, Sendable {
+  case system
+  case user
+  case assistant
+  case tool
+
+  public func encode(to encoder: Encoder) throws {
+    var container = encoder.singleValueContainer()
+    switch self {
+    case .system:
+      try container.encode("system")
+    case .user:
+      try container.encode("user")
+    case .assistant:
+      try container.encode("assistant")
+    case .tool:
+      try container.encode("tool")
+    }
   }
-  let role: String
+
+  public init(from decoder: Decoder) throws {
+    let container = try decoder.singleValueContainer()
+    let rawValue = try container.decode(String.self)
+    switch rawValue {
+    case "system":
+      self = .system
+    case "user":
+      self = .user
+    case "assistant":
+      self = .assistant
+    case "tool":
+      self = .tool
+    default:
+      throw DecodingError.dataCorrupted(
+        DecodingError.Context(
+          codingPath: decoder.codingPath, debugDescription: "Invalid role value: \(rawValue)")
+      )
+    }
+  }
+}
+
+public struct OllamaMessage: Codable, Sendable {
+  let role: Role
   var content: String
   var toolCalls: [OllamaToolCall]?
   let toolCallId: String?
@@ -115,7 +150,7 @@ public struct OllamaMessage: Codable, Sendable {
   }
 
   public init(
-    role: String, content: String, toolCalls: [OllamaToolCall]? = nil, toolCallId: String? = nil
+    role: Role, content: String, toolCalls: [OllamaToolCall]? = nil, toolCallId: String? = nil
   ) {
     self.role = role
     self.content = content

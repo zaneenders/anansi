@@ -8,7 +8,8 @@ public let ollamaTools = [
     type: "function",
     function: OllamaFunction(
       name: "read_file",
-      description: "Read the contents of a file",
+      description:
+        "Read the contents of a given file path. Use this when you want to see what's inside a file. Do not use this with directory names.",
       parameters: OllamaParameters(
         type: "object",
         properties: [
@@ -25,7 +26,25 @@ public let ollamaTools = [
     type: "function",
     function: OllamaFunction(
       name: "list_directory",
-      description: "List the contents of the current directory",
+      description:
+        "List files and directories at a given path. If no path provided, lists current directory. Use this when you need to see what files exist.",
+      parameters: OllamaParameters(
+        type: "object",
+        properties: [
+          "path": OllamaProperty(
+            type: "string",
+            description: "The directory path to list (optional, defaults to current directory)"
+          )
+        ],
+        required: []
+      )
+    )
+  ),
+  OllamaTool(
+    type: "function",
+    function: OllamaFunction(
+      name: "get_current_directory",
+      description: "Get the current working directory path",
       parameters: OllamaParameters(
         type: "object",
         properties: [:],
@@ -33,6 +52,7 @@ public let ollamaTools = [
       )
     )
   ),
+  /*
   OllamaTool(
     type: "function",
     function: OllamaFunction(
@@ -50,6 +70,7 @@ public let ollamaTools = [
       )
     )
   ),
+ */
 ]
 
 internal func executeTool(_ toolCall: OllamaToolCall) async -> String {
@@ -66,12 +87,24 @@ internal func executeTool(_ toolCall: OllamaToolCall) async -> String {
       return "Error reading file: \(error.localizedDescription)"
     }
   case "list_directory":
+    let path = toolCall.function.arguments["path"] ?? "."
     do {
-      let result = try await listDirectory()
+      let result = try await listDirectory(path: path.isEmpty ? "." : path)
+      print(
+        "DEBUG: list_directory('\(path)') -> using '\(path.isEmpty ? "." : path)' returned: '\(result)'"
+      )
       return result
     } catch {
-      return "Error listing directory: \(error.localizedDescription)"
+      return "Error listing directory '\(path)': \(error.localizedDescription)"
     }
+  case "get_current_directory":
+    do {
+      let result = try await getCurrentDirectory()
+      return result
+    } catch {
+      return "Error getting current directory: \(error.localizedDescription)"
+    }
+  /*
   case "web_search":
     guard let query = toolCall.function.arguments["query"] else {
       return "Missing query in arguments"
@@ -82,15 +115,25 @@ internal func executeTool(_ toolCall: OllamaToolCall) async -> String {
     } catch {
       return "Error performing web search: \(error.localizedDescription)"
     }
+  */
   default:
     return "Unknown tool: \(toolCall.function.name)"
   }
 }
 
-func listDirectory() async throws -> String {
+func listDirectory(path: String = ".") async throws -> String {
   do {
-    let result = try await run(.name("ls"), output: .string(limit: 4096))
+    let result = try await run(.name("ls"), arguments: [path], output: .string(limit: 4096))
     return result.standardOutput ?? ""
+  } catch {
+    throw error
+  }
+}
+
+func getCurrentDirectory() async throws -> String {
+  do {
+    let result = try await run(.name("pwd"), arguments: [], output: .string(limit: 4096))
+    return result.standardOutput?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
   } catch {
     throw error
   }

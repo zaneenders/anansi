@@ -26,27 +26,36 @@ struct AnansiChat {
 
     print("🔗 Connected to: \(ollamaEndpoint)")
     print("─" * 50)
-    let chatURL = "\(ollamaEndpoint)/api/chat"
 
     let agent = Agent(
-      endpoint: chatURL,
+      endpoint: ollamaEndpoint,
       messages: [
         OllamaMessage(
-          role: "system",
+          role: .system,
           content:
             """
-            You are a helpful assistant with access to tools.
+            You are a helpful assistant that can read files and list directories using tools.
+
+            CRITICAL RULES:
+            1. NEVER make up file names, directory contents, or file contents
+            2. ONLY respond with information from tool results
+            3. When asked about files/directories, ALWAYS use tools first
+            4. Do not add any information that wasn't provided by tools
 
             Available tools:
-            - list_directory: List files in the current directory
-            - read_file: Read contents of a file (requires file_path parameter)
-            - web_search: Search the internet (requires query parameter)
+            - list_directory: Shows files and directories
+            - read_file: Shows file contents
+            - get_current_directory: Gets current working directory path
+            - web_search: Searches internet
 
-            When you need to use a tool, respond with a function call in JSON format. After tool execution results are provided, continue the conversation normally to answer the user's question based on the tool results.
-
-            Only use tools when necessary to answer the user's question.
+            Process: User asks → You use tool → You get exact results → You report ONLY those results
             """
-        )
+        ),
+        OllamaMessage(
+          role: .user,
+          content: """
+            - [ ] Start by getting the path to your current directory with get_current_directory.
+            """),
       ])
 
     while true {
