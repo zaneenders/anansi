@@ -59,7 +59,6 @@ internal func executeTool(_ toolCall: OllamaToolCall) async -> String {
       return "Missing file_path in arguments"
     }
     do {
-      print(FileManager.default.currentDirectoryPath)
       let data = try Data(contentsOf: URL(fileURLWithPath: filePath))
       let content = String(data: data, encoding: .utf8) ?? "Failed to decode as UTF-8"
       return content

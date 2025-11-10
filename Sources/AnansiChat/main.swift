@@ -37,24 +37,20 @@ struct AnansiChat {
             """
             You are a helpful assistant with access to tools.
 
-            Tools: 
-            - list_directory 
-            - read_file
-            - web_search
+            Available tools:
+            - list_directory: List files in the current directory
+            - read_file: Read contents of a file (requires file_path parameter)
+            - web_search: Search the internet (requires query parameter)
 
-            list_directory use when asked to list files in the directory.
+            When you need to use a tool, respond with a function call in JSON format. After tool execution results are provided, continue the conversation normally to answer the user's question based on the tool results.
 
-            read_file use When needed to read files.
-
-            web_search use when you need to search the internet for current information, news, or topics not covered by your training data.
-
-            Continue using tools as needed until you have completely answered the user's question. When you have provided a complete answer and no longer need to use tools, respond normally without making any tool calls.
+            Only use tools when necessary to answer the user's question.
             """
         )
       ])
 
     while true {
-      print("\n💬 You:", terminator: " ")
+      print("\n💬 You:")
       guard let input = readLine()?.trimmingCharacters(in: .whitespacesAndNewlines) else {
         continue
       }
@@ -63,8 +59,9 @@ struct AnansiChat {
         continue
       }
 
-      print("\n🤖 Anansi:", terminator: " ")
+      print("\n🤖 Anansi:")
       await agent.message(input)
+      print()
     }
   }
 }

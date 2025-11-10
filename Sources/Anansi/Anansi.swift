@@ -21,16 +21,13 @@ public actor Agent {
     self.messages = messages
   }
 
-  public func message(_ message: String) {
+  public func message(_ message: String) async {
     messages.append(
       OllamaMessage(
         role: "user",
         content: message
       ))
-    Task {
-      print("sending to model")
-      await sendMessages()
-    }
+    await sendMessages()
   }
 
   func sendMessages() async {
@@ -55,39 +52,52 @@ public actor Agent {
       }
 
       let lines = jsonString.split(separator: "\n", omittingEmptySubsequences: true)
+      var currentContent = ""
+      var toolCalls: [OllamaToolCall]?
 
       for line in lines {
         do {
           let chatResponse = try decoder.decode(OllamaChatResponse.self, from: Data(line.utf8))
-          await processMessage(chatResponse)
+
+          if !chatResponse.message.content.isEmpty {
+            print(chatResponse.message.content, terminator: "")
+            currentContent += chatResponse.message.content
+          }
+
+          if let calls = chatResponse.message.toolCalls {
+            toolCalls = calls
+          }
+
+          if chatResponse.done {
+            let finalMessage = OllamaMessage(
+              role: chatResponse.message.role,
+              content: currentContent,
+              toolCalls: toolCalls
+            )
+
+            messages.append(finalMessage)
+
+            if let toolCalls = toolCalls {
+              print("\n\n🔧 Using tools...")
+              for toolCall in toolCalls {
+                print("  📞 \(toolCall.function.name)")
+                let result = await executeTool(toolCall)
+                messages.append(
+                  OllamaMessage(
+                    role: "tool",
+                    content: result
+                  ))
+              }
+              print("\n🤖 Anansi:")
+              await sendMessages()
+            }
+          }
         } catch {
-          print("Unable to process: \(line)")
+          continue
         }
       }
     } catch {
-      print(error)
-    }
-  }
-
-  func processMessage(_ message: OllamaChatResponse) async {
-    print(message.message.content, terminator: "")
-    messages.append(
-      OllamaMessage(
-        role: "assistant",
-        content: message.message.content
-      ))
-    if let toolCalls = message.message.toolCalls {
-      print("Need to make ToolCalls: \(toolCalls.count)")
-      for toolCall in toolCalls {
-        print("Calling \(toolCall.function.name)")
-        let result = await executeTool(toolCall)
-        print("Call completed")
-        messages.append(
-          OllamaMessage(
-            role: "tool",
-            content: result
-          ))
-      }
+      print("Error: \(error)")
     }
   }
 }
