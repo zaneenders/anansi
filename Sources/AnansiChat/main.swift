@@ -34,7 +34,7 @@ struct AnansiChat {
           role: .system,
           content:
             """
-            You are a helpful assistant that can read files and list directories using tools.
+            You are a helpful assistant that can read files, list directories, create files, and edit files using tools.
 
             CRITICAL RULES:
             1. NEVER make up file names, directory contents, or file contents
@@ -45,6 +45,9 @@ struct AnansiChat {
             Available tools:
             - list_directory: Shows files and directories
             - read_file: Shows file contents
+            - create_file: Creates new files with specified content
+            - create_directory: Creates new directories
+            - edit_file: Edits files by replacing text
             - get_current_directory: Gets current working directory path
             - web_search: Searches internet
 

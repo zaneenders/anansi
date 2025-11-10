@@ -53,6 +53,76 @@ public let ollamaTools = [
       )
     )
   ),
+  OllamaTool(
+    type: "function",
+    function: OllamaFunction(
+      name: "edit_file",
+      description: """
+        Make edits to a text file. Replaces 'old_str' with 'new_str' in the given file. 
+        'old_str' and 'new_str' MUST be different from each other. If the file specified 
+        with path doesn't exist, it will be created.
+        """,
+      parameters: OllamaParameters(
+        type: "object",
+        properties: [
+          "path": OllamaProperty(
+            type: "string",
+            description: "The path to the file"
+          ),
+          "old_str": OllamaProperty(
+            type: "string",
+            description:
+              "Text to search for - must match exactly and must only have one match exactly"
+          ),
+          "new_str": OllamaProperty(
+            type: "string",
+            description: "Text to replace old_str with"
+          ),
+        ],
+        required: ["path", "old_str", "new_str"]
+      )
+    )
+  ),
+  OllamaTool(
+    type: "function",
+    function: OllamaFunction(
+      name: "create_file",
+      description:
+        "Create a new file with the specified content. If the file already exists, it will be overwritten.",
+      parameters: OllamaParameters(
+        type: "object",
+        properties: [
+          "path": OllamaProperty(
+            type: "string",
+            description: "The path where the file should be created"
+          ),
+          "content": OllamaProperty(
+            type: "string",
+            description: "The content to write to the new file"
+          ),
+        ],
+        required: ["path", "content"]
+      )
+    )
+  ),
+  OllamaTool(
+    type: "function",
+    function: OllamaFunction(
+      name: "create_directory",
+      description:
+        "Create a new directory at the specified path. Creates parent directories if needed.",
+      parameters: OllamaParameters(
+        type: "object",
+        properties: [
+          "path": OllamaProperty(
+            type: "string",
+            description: "The path where the directory should be created"
+          )
+        ],
+        required: ["path"]
+      )
+    )
+  ),
   /*
   OllamaTool(
     type: "function",
@@ -74,7 +144,7 @@ public let ollamaTools = [
  */
 ]
 
-internal func executeTool(_ toolCall: OllamaToolCall) async -> String {
+func executeTool(_ toolCall: OllamaToolCall) async -> String {
   switch toolCall.function.name {
   case "read_file":
     guard let filePath = toolCall.function.arguments["file_path"] else {
@@ -94,9 +164,6 @@ internal func executeTool(_ toolCall: OllamaToolCall) async -> String {
     let path = toolCall.function.arguments["path"] ?? "."
     do {
       let result = try await listDirectory(path: path.isEmpty ? "." : path)
-      print(
-        "DEBUG: list_directory('\(path)') -> using '\(path.isEmpty ? "." : path)' returned: '\(result)'"
-      )
       return result
     } catch {
       return "Error listing directory '\(path)': \(error.localizedDescription)"
@@ -107,6 +174,48 @@ internal func executeTool(_ toolCall: OllamaToolCall) async -> String {
       return result
     } catch {
       return "Error getting current directory: \(error.localizedDescription)"
+    }
+  case "edit_file":
+    guard let path = toolCall.function.arguments["path"],
+      let oldStr = toolCall.function.arguments["old_str"],
+      let newStr = toolCall.function.arguments["new_str"]
+    else {
+      return "Missing required arguments: path, old_str, new_str"
+    }
+
+    if oldStr == newStr {
+      return "Error: old_str and new_str must be different"
+    }
+
+    do {
+      let result = try await editFile(path: path, oldStr: oldStr, newStr: newStr)
+      return result
+    } catch {
+      return "Error editing file: \(error.localizedDescription)"
+    }
+  case "create_file":
+    guard let path = toolCall.function.arguments["path"],
+      let content = toolCall.function.arguments["content"]
+    else {
+      return "Missing required arguments: path, content"
+    }
+
+    do {
+      try await createNewFile(path: path, content: content)
+      return "Successfully created file \(path)"
+    } catch {
+      return "Error creating file: \(error.localizedDescription)"
+    }
+  case "create_directory":
+    guard let path = toolCall.function.arguments["path"] else {
+      return "Missing required argument: path"
+    }
+
+    do {
+      try await createDirectory(path: path)
+      return "Successfully created directory \(path)"
+    } catch {
+      return "Error creating directory: \(error.localizedDescription)"
     }
   /*
   case "web_search":
@@ -146,6 +255,66 @@ func listDirectory(path: String = ".") async throws -> String {
 func getCurrentDirectory() async throws -> String {
   let fileSystem = FileSystem.shared
   return try await fileSystem.currentWorkingDirectory.string
+}
+
+func editFile(path: String, oldStr: String, newStr: String) async throws -> String {
+  let fileSystem = FileSystem.shared
+  let filePath = FilePath(path)
+
+  let fileExists = try await fileSystem.info(forFileAt: filePath) != nil
+
+  if !fileExists {
+    if oldStr.isEmpty {
+      try await createNewFile(path: path, content: newStr)
+      return "Successfully created file \(path)"
+    } else {
+      throw AnansiError.fileDoesNotExist(path: path)
+    }
+  }
+
+  let content = try await fileSystem.withFileHandle(forReadingAt: filePath) { handle in
+    try await handle.readToEnd(maximumSizeAllowed: .bytes(1024 * 1024 * 10))  // 10MB limit
+  }
+
+  let contentString = String(buffer: content)
+
+  let newContent = contentString.replacing(oldStr, with: newStr, maxReplacements: 1)
+
+  if newContent == contentString && !oldStr.isEmpty {
+    throw AnansiError.oldStringNotFound(oldString: oldStr)
+  }
+
+  let buffer = ByteBuffer(string: newContent)
+  _ = try await fileSystem.withFileHandle(
+    forWritingAt: filePath, options: .modifyFile(createIfNecessary: false)
+  ) { handle in
+    try await handle.write(contentsOf: buffer, toAbsoluteOffset: 0)
+  }
+
+  return "OK"
+}
+
+func createNewFile(path: String, content: String) async throws {
+  let fileSystem = FileSystem.shared
+  let filePath = FilePath(path)
+
+  let directoryPath = filePath.removingLastComponent()
+  if !directoryPath.isEmpty {
+    try await fileSystem.createDirectory(at: directoryPath, withIntermediateDirectories: true)
+  }
+
+  let buffer = ByteBuffer(string: content)
+  _ = try await fileSystem.withFileHandle(
+    forWritingAt: filePath, options: .newFile(replaceExisting: true)
+  ) { handle in
+    try await handle.write(contentsOf: buffer, toAbsoluteOffset: 0)
+  }
+}
+
+func createDirectory(path: String) async throws {
+  let fileSystem = FileSystem.shared
+  let directoryPath = FilePath(path)
+  try await fileSystem.createDirectory(at: directoryPath, withIntermediateDirectories: true)
 }
 
 func webSearch(query: String) async throws -> String {
