@@ -30,6 +30,7 @@ let package = Package(
         .product(name: "HTTPTypes", package: "swift-http-types"),
         .product(name: "AsyncHTTPClient", package: "async-http-client"),
         .product(name: "Subprocess", package: "swift-subprocess"),
+        .product(name: "_NIOFileSystem", package: "swift-nio"),
       ]
     ),
     .executableTarget(

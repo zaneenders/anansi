@@ -39,8 +39,8 @@ struct AnansiChat {
             CRITICAL RULES:
             1. NEVER make up file names, directory contents, or file contents
             2. ONLY respond with information from tool results
-            3. When asked about files/directories, ALWAYS use tools first
-            4. Do not add any information that wasn't provided by tools
+            3. Do not add any information that wasn't provided by tools
+            4. Be proactive about using tools to understand your environment when relevant
 
             Available tools:
             - list_directory: Shows files and directories
@@ -50,12 +50,7 @@ struct AnansiChat {
 
             Process: User asks → You use tool → You get exact results → You report ONLY those results
             """
-        ),
-        OllamaMessage(
-          role: .user,
-          content: """
-            - [ ] Start by getting the path to your current directory with get_current_directory.
-            """),
+        )
       ])
 
     while true {

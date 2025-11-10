@@ -1,6 +1,7 @@
 import AsyncHTTPClient
 import Foundation
 import NIOCore
+import NIOFileSystem
 import Subprocess
 
 public let ollamaTools = [
@@ -80,9 +81,12 @@ internal func executeTool(_ toolCall: OllamaToolCall) async -> String {
       return "Missing file_path in arguments"
     }
     do {
-      let data = try Data(contentsOf: URL(fileURLWithPath: filePath))
-      let content = String(data: data, encoding: .utf8) ?? "Failed to decode as UTF-8"
-      return content
+      let fileSystem = FileSystem.shared
+      let filePath = FilePath(filePath)
+      let contents = try await fileSystem.withFileHandle(forReadingAt: filePath) { handle in
+        try await handle.readToEnd(maximumSizeAllowed: .bytes(1024 * 1024 * 10))  // 10MB limit
+      }
+      return String(buffer: contents)
     } catch {
       return "Error reading file: \(error.localizedDescription)"
     }
@@ -122,21 +126,26 @@ internal func executeTool(_ toolCall: OllamaToolCall) async -> String {
 }
 
 func listDirectory(path: String = ".") async throws -> String {
-  do {
-    let result = try await run(.name("ls"), arguments: [path], output: .string(limit: 4096))
-    return result.standardOutput ?? ""
-  } catch {
-    throw error
+  let fileSystem = FileSystem.shared
+  let directoryPath = FilePath(path)
+
+  var result = ""
+  try await fileSystem.withDirectoryHandle(atPath: directoryPath) { handle in
+    for try await entry in handle.listContents() {
+      let entryPath = directoryPath.appending(entry.name)
+      let info = try await fileSystem.info(forFileAt: entryPath)
+
+      let type = info?.type == .directory ? "DIR" : "FILE"
+      result += "\(type)\t\(entry.name)\n"
+    }
   }
+
+  return result
 }
 
 func getCurrentDirectory() async throws -> String {
-  do {
-    let result = try await run(.name("pwd"), arguments: [], output: .string(limit: 4096))
-    return result.standardOutput?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-  } catch {
-    throw error
-  }
+  let fileSystem = FileSystem.shared
+  return try await fileSystem.currentWorkingDirectory.string
 }
 
 func webSearch(query: String) async throws -> String {

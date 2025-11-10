@@ -5,7 +5,7 @@ import NIOFileSystem
 import Subprocess
 
 public actor Agent {
-  let model = "llama3-groq-tool-use"
+  let model = "qwen3:8b"
   let endpoint: String
   let encoder = JSONEncoder()
   let decoder = JSONDecoder()
