@@ -7,4 +7,4 @@
 Package.resolved
 # Other
 .env
-
+.vscode

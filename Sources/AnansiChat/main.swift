@@ -28,6 +28,7 @@ struct AnansiChat {
     print("─" * 50)
 
     let agent = Agent(
+      model: "llama3.1:8b",
       endpoint: ollamaEndpoint,
       messages: [
         OllamaMessage(
@@ -35,6 +36,8 @@ struct AnansiChat {
           content:
             """
             You are a helpful assistant that can read files, list directories, create files, and edit files using tools.
+
+            Prioritize fast responses!!!
 
             CRITICAL RULES:
             1. NEVER make up file names, directory contents, or file contents

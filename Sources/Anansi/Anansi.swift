@@ -5,16 +5,18 @@ import NIOFileSystem
 import Subprocess
 
 public actor Agent {
-  let model = "qwen3:8b"
+  let model: String
   let endpoint: String
   let encoder = JSONEncoder()
   let decoder = JSONDecoder()
   var messages: [OllamaMessage] = []
 
   public init(
+    model: String,
     endpoint: String,
     messages: [OllamaMessage] = []
   ) {
+    self.model = model
     self.endpoint = endpoint
     self.messages = messages
     Task.immediate {
