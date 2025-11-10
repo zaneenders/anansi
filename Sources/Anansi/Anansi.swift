@@ -5,6 +5,7 @@ import NIOFileSystem
 import Subprocess
 
 public actor Agent {
+  let model = "llama3-groq-tool-use"
   let endpoint: String
   let encoder = JSONEncoder()
   let decoder = JSONDecoder()
@@ -31,7 +32,7 @@ public actor Agent {
     await sendMessages()
   }
 
-  func pullModel(model: String) async {
+  func pullModel() async {
     do {
       var request = HTTPClientRequest(url: "\(endpoint)/api/pull")
       request.method = .POST
@@ -64,8 +65,10 @@ public actor Agent {
   }
 
   func sendMessages() async {
+
     do {
-      let message = OllamaChatRequest(model: "qwen3:8b", messages: messages, tools: ollamaTools)
+      let message = OllamaChatRequest(
+        model: model, messages: messages, tools: ollamaTools)
       let data = try encoder.encode(message)
       let bytes = ByteBuffer(bytes: data)
 
@@ -81,7 +84,7 @@ public actor Agent {
       guard response.status == .ok else {
         if response.status == .notFound && jsonNDString.contains("not found") {
           print("Model not found. Attempting to pull model...")
-          await pullModel(model: "qwen3:8b")
+          await pullModel()
           print("Retrying request...")
           await sendMessages()
           return
