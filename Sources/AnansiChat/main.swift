@@ -28,7 +28,7 @@ struct AnansiChat {
     print("─" * 50)
 
     let agent = Agent(
-      model: "llama3.1:8b",
+      model: "gpt-oss:20b",
       endpoint: ollamaEndpoint,
       messages: [
         OllamaMessage(
