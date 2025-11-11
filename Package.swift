@@ -1,14 +1,15 @@
-// swift-tools-version: 6.1
+// swift-tools-version: 6.2
 
 import PackageDescription
 
 let package = Package(
   name: "anansi",
   platforms: [
-    .macOS("15.0")
+    .macOS("26.0")
   ],
   products: [
-    .library(name: "Anansi", targets: ["Anansi"])
+    .library(name: "Anansi", targets: ["Anansi"]),
+    .executable(name: "anansi-chat", targets: ["AnansiChat"]),
   ],
   dependencies: [
     .package(
@@ -17,17 +18,40 @@ let package = Package(
     .package(
       url: "git@github.com:apple/swift-http-types.git",
       from: "1.3.1"),
+    .package(
+      url: "https://github.com/apple/swift-configuration", from: "0.2.0"),
+    .package(url: "https://github.com/apple/swift-nio.git", from: "2.8.8"),
+    .package(url: "https://github.com/swiftlang/swift-subprocess.git", from: "0.2.1"),
   ],
   targets: [
-    // MARK: targets
     .target(
       name: "Anansi",
       dependencies: [
         .product(name: "HTTPTypes", package: "swift-http-types"),
         .product(name: "AsyncHTTPClient", package: "async-http-client"),
+        .product(name: "Subprocess", package: "swift-subprocess"),
+        .product(name: "_NIOFileSystem", package: "swift-nio"),
       ]
     ),
-    // MARK: test targets
-    .testTarget(name: "AnansiTests", dependencies: ["Anansi"]),
+    .executableTarget(
+      name: "AnansiChat",
+      dependencies: [
+        "Anansi",
+        .product(name: "NIOCore", package: "swift-nio"),
+        .product(name: "_NIOFileSystemFoundationCompat", package: "swift-nio"),
+        .product(name: "_NIOFileSystem", package: "swift-nio"),
+        .product(name: "Configuration", package: "swift-configuration"),
+        .product(name: "AsyncHTTPClient", package: "async-http-client"),
+      ]),
+    .testTarget(
+      name: "AnansiTests",
+      dependencies: [
+        "Anansi",
+        .product(name: "NIOCore", package: "swift-nio"),
+        .product(name: "_NIOFileSystemFoundationCompat", package: "swift-nio"),
+        .product(name: "_NIOFileSystem", package: "swift-nio"),
+        .product(name: "Configuration", package: "swift-configuration"),
+        .product(name: "AsyncHTTPClient", package: "async-http-client"),
+      ]),
   ]
 )

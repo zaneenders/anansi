@@ -1,12 +1,19 @@
 # [Anansi](https://en.wikipedia.org/wiki/Anansi)
 
-No tricks here, just a tool to gain knowledge from the web.
+A Swift-based chat agent with tool support and observation capabilities.
 
-A web scrapper/crawler named after a spider from stories I was told as a kid.
+## Features
 
-## ⚠️ Project Status ⚠️
+- 🤖 Chat agent with Ollama model support
+- 🛠️ Built-in tools (file reading, directory listing, web search)
 
-The goal of this project is to build a Web Scrapper. Part of the goal of this project is learn more about how web browsers work. This means the project will included an HTML, CSS parser and a JavaScript interpretor over time.
+## Quick Start
 
-- [ ] parsing the HTML from my [website](https://zaneenders.com).
-- [ ] parse and interpret enough JavaScript for [HTMX](https://htmx.org) to update the DOM.
+```.env
+GEMINI_API_KEY=...
+OLLAMA_ENDPOINT=http://localhost:11434
+```
+
+## TODO
+
+- [ ] Factor out Agent creation into a resultBuilder DSL.
