@@ -86,7 +86,7 @@ public actor Agent {
       guard response.status == .ok else {
         if response.status == .notFound && jsonNDString.contains("not found") {
           print("Model not found. Attempting to pull model...")
-          await pullModel()
+          // await pullModel()
           print("Retrying request...")
           await sendMessages()
           return
