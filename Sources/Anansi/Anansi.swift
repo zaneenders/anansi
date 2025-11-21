@@ -4,18 +4,25 @@ import NIOCore
 import NIOFileSystem
 import Subprocess
 
+public protocol MessageHandler {
+  func response(_ message: String)
+}
+
 public actor Agent {
   let model: String
   let endpoint: String
   let encoder = JSONEncoder()
   let decoder = JSONDecoder()
   var messages: [OllamaMessage] = []
+  let handler: MessageHandler
 
   public init(
     model: String,
     endpoint: String,
-    messages: [OllamaMessage] = []
+    messages: [OllamaMessage] = [],
+    handler: MessageHandler
   ) {
+    self.handler = handler
     self.model = model
     self.endpoint = endpoint
     self.messages = messages
@@ -43,11 +50,11 @@ public actor Agent {
       let pullData = try JSONEncoder().encode(["name": model])
       request.body = .bytes(ByteBuffer(bytes: pullData))
 
-      print("Pulling model \(model)... This may take a while.")
+      handler.response("Pulling model \(model)... This may take a while.")
       let response = try await HTTPClient.shared.execute(request, timeout: .seconds(600))
 
       guard response.status == .ok else {
-        print("Failed to pull model: \(response.status)")
+        handler.response("Failed to pull model: \(response.status)")
         return
       }
 
@@ -57,12 +64,12 @@ public actor Agent {
       if responseString.contains("\"status\":\"success\"")
         || responseString.contains("\"status\":\"pulling\"")
       {
-        print("Model \(model) pulled successfully!")
+        handler.response("Model \(model) pulled successfully!")
       } else {
-        print("Unexpected response when pulling model: \(responseString)")
+        handler.response("Unexpected response when pulling model: \(responseString)")
       }
     } catch {
-      print("Error pulling model: \(error)")
+      handler.response("Error pulling model: \(error)")
     }
   }
 
@@ -85,14 +92,14 @@ public actor Agent {
 
       guard response.status == .ok else {
         if response.status == .notFound && jsonNDString.contains("not found") {
-          print("Model not found. Attempting to pull model...")
+          handler.response("Model not found. Attempting to pull model...")
           // await pullModel()
-          print("Retrying request...")
+          //print("Retrying request...")
           await sendMessages()
           return
         }
-        print("HTTP Error: \(response.status)")
-        print("Response body: \(jsonNDString)")
+        handler.response("HTTP Error: \(response.status)")
+        handler.response("Response body: \(jsonNDString)")
         return
       }
 
@@ -105,7 +112,7 @@ public actor Agent {
           let chatResponse = try decoder.decode(OllamaChatResponse.self, from: Data(line.utf8))
 
           if !chatResponse.message.content.isEmpty {
-            print(chatResponse.message.content, terminator: "")
+            handler.response(chatResponse.message.content)
             currentContent += chatResponse.message.content
           }
 
@@ -123,9 +130,9 @@ public actor Agent {
             messages.append(finalMessage)
 
             if !allToolCalls.isEmpty {
-              print("\n\n🔧 Using tools...")
+              handler.response("\n\n🔧 Using tools...")
               for toolCall in allToolCalls {
-                print("  📞 \(toolCall.function.name)")
+                handler.response("  📞 \(toolCall.function.name)")
                 let result = await executeTool(toolCall)
                 messages.append(
                   OllamaMessage(
@@ -133,7 +140,7 @@ public actor Agent {
                     content: result
                   ))
               }
-              print("\n🤖 Anansi:")
+              handler.response("\n🤖 Anansi:")
               await sendMessages()
             }
           }
@@ -142,7 +149,7 @@ public actor Agent {
         }
       }
     } catch {
-      print("Error: \(error)")
+      handler.response("Error: \(error)")
     }
   }
 }
