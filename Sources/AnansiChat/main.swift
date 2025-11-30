@@ -57,7 +57,8 @@ struct AnansiChat {
             Process: User asks → You use tool → You get exact results → You report ONLY those results
             """
         )
-      ])
+      ],
+      handler: StandardOutMessageHandler())
 
     while true {
       print("\n💬 You:")
@@ -79,5 +80,11 @@ struct AnansiChat {
 extension String {
   static func * (left: String, right: Int) -> String {
     return String(repeating: left, count: right)
+  }
+}
+
+final class StandardOutMessageHandler: MessageHandler {
+  func response(_ message: String) {
+    print(message)
   }
 }
