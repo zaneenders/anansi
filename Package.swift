@@ -22,6 +22,7 @@ let package = Package(
       url: "https://github.com/apple/swift-configuration", from: "0.2.0"),
     .package(url: "https://github.com/apple/swift-nio.git", from: "2.8.8"),
     .package(url: "https://github.com/swiftlang/swift-subprocess.git", from: "0.2.1"),
+    .package(url: "https://github.com/zaneenders/VirtualTerminal.git", branch: "macos-26"),
   ],
   targets: [
     .target(
@@ -42,6 +43,7 @@ let package = Package(
         .product(name: "_NIOFileSystem", package: "swift-nio"),
         .product(name: "Configuration", package: "swift-configuration"),
         .product(name: "AsyncHTTPClient", package: "async-http-client"),
+        .product(name: "VirtualTerminal", package: "VirtualTerminal"),
       ]),
     .testTarget(
       name: "AnansiTests",
