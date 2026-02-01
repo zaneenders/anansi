@@ -2,6 +2,7 @@ import AsyncHTTPClient
 import Foundation
 import NIOCore
 import NIOFileSystem
+import NIOFoundationCompat
 import NIOHTTP1
 import Subprocess
 
@@ -23,11 +24,6 @@ public actor Agent {
     if let systemPrompt = systemPrompt {
       self.messages.append(OllamaMessage(role: .system, content: systemPrompt))
     }
-
-    Task.immediate {
-      // IDK if this is needed but it loads the model
-      await sendMessages()
-    }
   }
 
   public func message(_ message: String) async {
@@ -39,86 +35,68 @@ public actor Agent {
     await sendMessages()
   }
 
-  func handleCompleteResponse(finalMessage: OllamaMessage, toolCalls: [OllamaToolCall]) async {
-    messages.append(finalMessage)
-
-    if !toolCalls.isEmpty {
-      print("\n🔧 Using tools...")
-      for toolCall in toolCalls {
-        print("  📞 \(toolCall.function.name)")
-        let result = await executeTool(toolCall)
-        messages.append(
-          OllamaMessage(
-            role: .tool,
-            content: result
-          ))
-      }
-      print("\n🤖 Anansi:")
-      await sendMessages()
-    }
-  }
-
-  func pullModel() async {
-    do {
-      var request = HTTPClientRequest(url: "\(endpoint)/api/pull")
-      request.method = .POST
-      request.headers.add(name: "Content-Type", value: "application/json")
-
-      let pullData = try JSONEncoder().encode(["name": model])
-      request.body = .bytes(ByteBuffer(bytes: pullData))
-
-      print("Pulling model \(model)... This may take a while.")
-      let response = try await HTTPClient.shared.execute(request, timeout: .seconds(600))
-
-      guard response.status == .ok else {
-        print("Failed to pull model: \(response.status)")
-        return
-      }
-
-      let body = try await response.body.collect(upTo: .max)
-      let responseString = String(buffer: body)
-
-      if responseString.contains("\"status\":\"success\"")
-        || responseString.contains("\"status\":\"pulling\"")
-      {
-        print("Model \(model) pulled successfully!")
-      } else {
-        print("Unexpected response when pulling model: \(responseString)")
-      }
-    } catch {
-      print("Error pulling model: \(error)")
-    }
-  }
-
   func sendMessages() async {
     do {
-      let message = OllamaChatRequest(
-        model: model, messages: messages, tools: ollamaTools, stream: true)
-      let data = try encoder.encode(message)
-      let bytes = ByteBuffer(bytes: data)
-
-      var request = HTTPClientRequest(url: "\(endpoint)/api/chat")
-      request.method = .POST
-      request.headers.add(name: "Content-Type", value: "application/json")
-      request.body = .bytes(bytes)
-
-      let response = try await HTTPClient.shared.execute(request, timeout: .seconds(3))
-
-      if response.status == .ok {
-        var bodyReader = response.body.makeAsyncIterator()
-        var chunk = try await bodyReader.next()
-        while let line = chunk {
-          let jsonNDString = String(buffer: line)
-          let chatResponse = try decoder.decode(
-            OllamaChatResponse.self, from: Data(jsonNDString.utf8))
-          print(chatResponse.message.content, terminator: "")
-          chunk = try await bodyReader.next()
+      var madeToolCalls = false
+      var isThiniking = false
+      let request = try makeChatRequest()
+      let response = try await HTTPClient.shared.execute(request, timeout: .hours(24))
+      for try await buffer in response.body {
+        if let rsp = try? decoder.decode(OllamaChatResponse.self, from: buffer) {
+          if let toolCalls = rsp.message.toolCalls, !toolCalls.isEmpty {
+            for toolCall in toolCalls {
+              print()
+              if toolCall.function.arguments.isEmpty {
+                print("🛠️\(toolCall.function.name)()")
+              } else {
+                print("🛠️\(toolCall.function.name)(", terminator: "")
+              }
+              for (i, (arg, value)) in toolCall.function.arguments.enumerated() {
+                if i == toolCall.function.arguments.count - 1 {
+                  print("\(arg):\(value))")
+                } else {
+                  print("\(arg):\(value),", terminator: " ")
+                }
+              }
+              madeToolCalls = true
+              let result = await executeTool(toolCall)
+              messages.append(
+                OllamaMessage(
+                  role: .tool, content: result, toolCalls: nil, toolCallId: toolCall.id))
+            }
+          } else {
+            if let thinking = rsp.message.thinking {
+              if isThiniking {
+                print(thinking, terminator: "")
+              } else {
+                print()
+                print("🧠" + thinking, terminator: "")
+              }
+              isThiniking = true
+            } else {
+              isThiniking = false
+              print(rsp.message.content, terminator: "")
+            }
+          }
         }
-      } else {
-        print(response.status)
+      }
+      if madeToolCalls {
+        await sendMessages()
       }
     } catch {
       print("Error: \(error)")
     }
+  }
+
+  private func makeChatRequest() throws -> HTTPClientRequest {
+    let message = OllamaChatRequest(
+      model: model, messages: messages, tools: ollamaTools, stream: true, think: true)
+    let data = try encoder.encode(message)
+    var request = HTTPClientRequest(url: endpoint + "/api/chat")
+    request.method = .POST
+    request.headers.add(name: "Content-Type", value: "application/json")
+    request.headers.add(name: "Accept", value: "text/event-stream")
+    request.body = .bytes(ByteBuffer(bytes: data))
+    return request
   }
 }

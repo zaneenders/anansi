@@ -51,16 +51,18 @@ public struct OllamaChatRequest: Codable, Sendable {
   let messages: [OllamaMessage]
   let tools: [OllamaTool]?
   let stream: Bool
+  let think: Bool
 
   init(
     model: String, messages: [OllamaMessage], options: OllamaOptions = OllamaOptions(),
-    tools: [OllamaTool]? = nil, stream: Bool = true
+    tools: [OllamaTool]? = nil, stream: Bool = true, think: Bool = false
   ) {
     self.model = model
     self.messages = messages
     self.options = options
     self.tools = tools
     self.stream = stream
+    self.think = think
   }
 }
 
@@ -143,21 +145,25 @@ public struct OllamaMessage: Codable, Sendable {
   var content: String
   var toolCalls: [OllamaToolCall]?
   let toolCallId: String?
+  var thinking: String?
 
   enum CodingKeys: String, CodingKey {
     case role
     case content
     case toolCalls = "tool_calls"
     case toolCallId = "tool_call_id"
+    case thinking
   }
 
   public init(
-    role: Role, content: String, toolCalls: [OllamaToolCall]? = nil, toolCallId: String? = nil
+    role: Role, content: String, toolCalls: [OllamaToolCall]? = nil, toolCallId: String? = nil,
+    thinking: String? = nil
   ) {
     self.role = role
     self.content = content
     self.toolCalls = toolCalls
     self.toolCallId = toolCallId
+    self.thinking = thinking
   }
 }
 
