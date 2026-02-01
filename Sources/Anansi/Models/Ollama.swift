@@ -50,15 +50,17 @@ public struct OllamaChatRequest: Codable, Sendable {
   let options: OllamaOptions
   let messages: [OllamaMessage]
   let tools: [OllamaTool]?
+  let stream: Bool
 
   init(
     model: String, messages: [OllamaMessage], options: OllamaOptions = OllamaOptions(),
-    tools: [OllamaTool]? = nil
+    tools: [OllamaTool]? = nil, stream: Bool = true
   ) {
     self.model = model
     self.messages = messages
     self.options = options
     self.tools = tools
+    self.stream = stream
   }
 }
 

@@ -89,7 +89,7 @@ struct AnansiChat {
       ])
 
     while true {
-      print("\n💬 You:")
+      print("\n💬 You: ", terminator: "")
       guard let input = readLine()?.trimmingCharacters(in: .whitespacesAndNewlines) else {
         continue
       }
@@ -98,9 +98,8 @@ struct AnansiChat {
         continue
       }
 
-      print("\n🤖 Anansi:")
+      print("🤖 Anansi: ", terminator: "")
       await agent.message(input)
-      print()
     }
   }
 }
