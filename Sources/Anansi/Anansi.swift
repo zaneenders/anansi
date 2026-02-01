@@ -13,10 +13,16 @@ public actor Agent {
 
   public init(
     endpoint: String,
+    systemPrompt: String? = nil,
     messages: [OllamaMessage] = []
   ) {
     self.endpoint = endpoint
     self.messages = messages
+    
+    if let systemPrompt = systemPrompt {
+      self.messages.append(OllamaMessage(role: .system, content: systemPrompt))
+    }
+    
     Task.immediate {
       // IDK if this is needed but it loads the model
       await sendMessages()
