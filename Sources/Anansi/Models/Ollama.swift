@@ -156,9 +156,9 @@ public struct OllamaMessage: Codable, Sendable {
   }
 
   public init(
-    role: Role, content: String, toolCalls: [OllamaToolCall]? = nil, toolCallId: String? = nil,
-    thinking: String? = nil
-  ) {
+    role: Role, content: String,
+        toolCalls: [OllamaToolCall]? = nil, toolCallId: String? = nil,
+    thinking: String? = nil) {
     self.role = role
     self.content = content
     self.toolCalls = toolCalls

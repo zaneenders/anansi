@@ -14,3 +14,6 @@ GEMINI_API_KEY=...
 OLLAMA_ENDPOINT=http://localhost:11434
 ```
 
+## TODO
+
+- [ ] Factor out Agent creation into a resultBuilder DSL.
