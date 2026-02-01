@@ -5,7 +5,7 @@ import NIOFileSystem
 import Subprocess
 
 public actor Agent {
-  let model = "qwen3:8b"
+  let model = "glm-4.7-flash"
   let endpoint: String
   let encoder = JSONEncoder()
   let decoder = JSONDecoder()
