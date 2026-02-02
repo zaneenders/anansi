@@ -18,6 +18,13 @@ struct AnansiChat {
       return
     }
 
+    guard let geminiApiKey = config.string(forKey: "GEMINI_API_KEY") else {
+      print("❌ GEMINI_API_KEYnot found in configuration")
+      print("Please add GEMINI_API_KEY=... to your .env file")
+      return
+    }
+    print(geminiApiKey)
+
     guard let ollamaEndpoint = config.string(forKey: "OLLAMA_ENDPOINT") else {
       print("❌ OLLAMA_ENDPOINT not found in configuration")
       print("Please add OLLAMA_ENDPOINT=http://localhost:11434/ to your .env file")
