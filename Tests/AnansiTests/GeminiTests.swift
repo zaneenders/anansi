@@ -16,12 +16,19 @@ import Testing
     return
   }
 
-  let model = "gemini-3-flash-preview"
+  // let model = "gemini-3-flash-preview"
+  // let model = "gemini-2.5-flash"
+  let model = "gemini-2.5-flash-lite"
   let url =
     "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent?key=\(geminiApiKey)"
 
   let prompt = GeminiRequest(contents: [
-    .init(parts: [.init(text: "Say 'Hello from Gemini!' and nothing else.")])
+    .init(parts: [
+      .init(
+        text:
+          "What happened in the world today? Please site all content with multiple links and references."
+      )
+    ])
   ])
 
   let encoder = JSONEncoder()
