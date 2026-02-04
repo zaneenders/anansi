@@ -148,13 +148,13 @@ class ToolsTests {
 
     do {
       _ = try await editFile(path: nonExistentFile, oldStr: "something", newStr: "something else")
-      #expect(Bool(false), "Should have thrown an error")
+      #expect(Bool(false))
     } catch let error as AnansiError {
       switch error {
       case .fileDoesNotExist:
         break  // Expected error
       default:
-        #expect(Bool(false), "Unexpected error type: \(error)")
+        #expect(Bool(false))
       }
     } catch {
       #expect(Bool(false), "Unexpected error type: \(error)")
@@ -171,13 +171,13 @@ class ToolsTests {
 
     do {
       _ = try await editFile(path: testFile, oldStr: oldStr, newStr: newStr)
-      #expect(Bool(false), "Should have thrown an error")
+      #expect(Bool(false))
     } catch let error as AnansiError {
       switch error {
       case .oldStringNotFound:
         break  // Expected error
       default:
-        #expect(Bool(false), "Unexpected error type: \(error)")
+        #expect(Bool(false))
       }
     } catch {
       #expect(Bool(false), "Unexpected error type: \(error)")
@@ -187,8 +187,8 @@ class ToolsTests {
   @Test func webSearchToolTest() async throws {
     let result = try await webSearch(query: "Swift programming")
 
-    #expect(!result.isEmpty, "Web search should return results")
-    #expect(!result.contains("Error"), "Web search should not contain error")
+    #expect(!result.isEmpty)
+    #expect(!result.contains("Error"))
   }
 
 }

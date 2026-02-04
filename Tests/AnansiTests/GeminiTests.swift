@@ -14,7 +14,7 @@ import Testing
       provider: EnvironmentVariablesProvider(environmentFilePath: ".env"))
     guard let geminiApiKey = config.string(forKey: "GEMINI_API_KEY") else {
       Issue.record(
-        "GEMINI_API_KEY not found in configuration. Please add GEMINI_API_KEY=... to your .env file"
+        "GEMINI_API_KEY not found in configuration"
       )
       return
     }
@@ -49,7 +49,6 @@ import Testing
     let result = try JSONDecoder().decode(GeminiResponse.self, from: body)
 
     if let answer = result.candidates.first?.content.parts.first?.text {
-      print("✅ Gemini response: \(answer)")
       #expect(!answer.isEmpty)
     } else {
       Issue.record("No response text from Gemini")
