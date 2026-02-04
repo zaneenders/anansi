@@ -7,7 +7,67 @@ import Testing
 
 @testable import Anansi
 
-@Test func geminiSetup() async throws {
+@Test func search() async throws {
+  let config = try await ConfigReader(
+    provider: EnvironmentVariablesProvider(environmentFilePath: ".env"))
+
+  guard let apiKey = config.string(forKey: "BRAVE_AI_SEARCH") else {
+    Issue.record(
+      "BRAVE_AI_SEARCH api key missing"
+    )
+    return
+  }
+
+  let testQuery = "Swift programming language"
+  let encodedQuery =
+    testQuery.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? testQuery
+  let searchURL = "https://api.search.brave.com/res/v1/web/search?q=\(encodedQuery)"
+
+  var request = HTTPClientRequest(url: searchURL)
+  request.method = .GET
+  request.headers.add(name: "User-Agent", value: "Anansi")
+  request.headers.add(name: "Accept", value: "application/json")
+  request.headers.add(name: "X-Subscription-Token", value: apiKey)
+
+  do {
+    let response = try await HTTPClient.shared.execute(request, timeout: .seconds(30))
+    let body = try await response.body.collect(upTo: .max)
+    let jsonString = String(buffer: body)
+
+    #expect(response.status == .ok)
+
+    guard let data = jsonString.data(using: .utf8) else {
+      Issue.record("Failed to encode response as UTF-8")
+      return
+    }
+
+    guard let searchResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+      let web = searchResponse["web"] as? [String: Any],
+      let results = web["results"] as? [[String: Any]]
+    else {
+      Issue.record("Failed to parse search response")
+      return
+    }
+
+    #expect(!results.isEmpty, "Search should return results")
+
+    if let firstResult = results.first {
+      let title = firstResult["title"] as? String ?? ""
+      let url = firstResult["url"] as? String ?? ""
+      #expect(!title.isEmpty, "First result should have a title")
+      #expect(!url.isEmpty, "First result should have a URL")
+      print("✅ Brave Search API test passed - Found \(results.count) results")
+      for result in results {
+        print(result)
+      }
+    }
+
+  } catch {
+    Issue.record("Brave Search API request failed: \(error.localizedDescription)")
+  }
+}
+
+@Test func geminiWhatHappenedToday() async throws {
   let config = try await ConfigReader(
     provider: EnvironmentVariablesProvider(environmentFilePath: ".env"))
   guard let geminiApiKey = config.string(forKey: "GEMINI_API_KEY") else {
