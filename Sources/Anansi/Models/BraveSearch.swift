@@ -16,41 +16,33 @@ struct Thumbnail: Codable {
 
 struct QueryInfo: Codable {
   let original: String
-  let more_results_available: Bool?
-  let spellcheck_off: Bool?
-  let show_strict_warning: Bool?
-  let is_navigational: Bool?
-  let is_news_breaking: Bool?
+  let moreResultsAvailable: Bool?
+  let spellcheckOff: Bool?
+  let showStrictWarning: Bool?
+  let isNavigational: Bool?
+  let isNewsBreaking: Bool?
   let country: String?
-  let bad_results: Bool?
-  let should_fallback: Bool?
-  let postal_code: String?
+  let badResults: Bool?
+  let shouldFallback: Bool?
+  let postalCode: String?
   let city: String?
-  let header_country: String?
+  let headerCountry: String?
   let state: String?
 
-  init(from decoder: Decoder) throws {
-    let container = try decoder.container(keyedBy: CodingKeys.self)
-    original = try container.decode(String.self, forKey: .original)
-    more_results_available = try container.decodeIfPresent(
-      Bool.self, forKey: .more_results_available)
-    spellcheck_off = try container.decodeIfPresent(Bool.self, forKey: .spellcheck_off)
-    show_strict_warning = try container.decodeIfPresent(Bool.self, forKey: .show_strict_warning)
-    is_navigational = try container.decodeIfPresent(Bool.self, forKey: .is_navigational)
-    is_news_breaking = try container.decodeIfPresent(Bool.self, forKey: .is_news_breaking)
-    country = try container.decodeIfPresent(String.self, forKey: .country)
-    bad_results = try container.decodeIfPresent(Bool.self, forKey: .bad_results)
-    should_fallback = try container.decodeIfPresent(Bool.self, forKey: .should_fallback)
-    postal_code = try container.decodeIfPresent(String.self, forKey: .postal_code)
-    city = try container.decodeIfPresent(String.self, forKey: .city)
-    header_country = try container.decodeIfPresent(String.self, forKey: .header_country)
-    state = try container.decodeIfPresent(String.self, forKey: .state)
-  }
-
-  private enum CodingKeys: String, CodingKey {
-    case original, more_results_available, spellcheck_off, show_strict_warning
-    case is_navigational, is_news_breaking, country, bad_results
-    case should_fallback, postal_code, city, header_country, state
+  enum CodingKeys: String, CodingKey {
+    case original
+    case moreResultsAvailable = "more_results_available"
+    case spellcheckOff = "spellcheck_off"
+    case showStrictWarning = "show_strict_warning"
+    case isNavigational = "is_navigational"
+    case isNewsBreaking = "is_news_breaking"
+    case country
+    case badResults = "bad_results"
+    case shouldFallback = "should_fallback"
+    case postalCode = "postal_code"
+    case city
+    case headerCountry = "header_country"
+    case state
   }
 }
 
@@ -58,23 +50,39 @@ struct WebResult: Codable {
   let title: String
   let url: String
   let description: String
-  let is_source_local: Bool?
-  let is_source_both: Bool?
+  let isSourceLocal: Bool?
+  let isSourceBoth: Bool?
   let language: String?
-  let family_friendly: Bool?
+  let familyFriendly: Bool?
   let type: String?
   let subtype: String?
   let age: String?
-  let extra_snippets: [String]?
+  let extraSnippets: [String]?
   let profile: Profile?
-  let meta_url: MetaURL?
+  let metaURL: MetaURL?
   let thumbnail: Thumbnail?
 
   struct Profile: Codable {
     let name: String
     let url: String
-    let long_name: String
+    let longName: String
     let img: String?
+
+    enum CodingKeys: String, CodingKey {
+      case name, url, img
+      case longName = "long_name"
+    }
+  }
+
+  enum CodingKeys: String, CodingKey {
+    case title, url, description, type, subtype, age, language
+    case isSourceLocal = "is_source_local"
+    case isSourceBoth = "is_source_both"
+    case familyFriendly = "family_friendly"
+    case extraSnippets = "extra_snippets"
+    case profile
+    case metaURL = "meta_url"
+    case thumbnail
   }
 }
 
@@ -84,17 +92,17 @@ struct VideoResult: Codable {
   let title: String
   let description: String?
   let age: String?
-  let page_age: String?
-  let fetched_content_timestamp: Int64?
+  let pageAge: String?
+  let fetchedContentTimestamp: Int64?
   let video: VideoInfo
-  let meta_url: MetaURL?
+  let metaURL: MetaURL?
 
   struct VideoInfo: Codable {
     let duration: String?
     let views: Int64?
     let creator: String?
     let publisher: String?
-    let requires_subscription: Bool?
+    let requiresSubscription: Bool?
     let tags: [String]?
     let author: VideoAuthor?
 
@@ -102,6 +110,18 @@ struct VideoResult: Codable {
       let name: String
       let url: String?
     }
+
+    enum CodingKeys: String, CodingKey {
+      case duration, views, creator, publisher, tags, author
+      case requiresSubscription = "requires_subscription"
+    }
+  }
+
+  enum CodingKeys: String, CodingKey {
+    case type, url, title, description, age, video
+    case pageAge = "page_age"
+    case fetchedContentTimestamp = "fetched_content_timestamp"
+    case metaURL = "meta_url"
   }
 }
 
@@ -112,45 +132,56 @@ struct MixedResult: Codable {
   let description: String?
   let age: String?
   let thumbnail: Thumbnail?
-  let cluster_id: String?
-  let extra_snippets: [String]?
-  let meta_url: MetaURL?
-  let is_source_local: Bool?
-  let is_source_both: Bool?
+  let clusterId: String?
+  let extraSnippets: [String]?
+  let metaURL: MetaURL?
+  let isSourceLocal: Bool?
+  let isSourceBoth: Bool?
   let language: String?
-  let family_friendly: Bool?
+  let familyFriendly: Bool?
+
+  enum CodingKeys: String, CodingKey {
+    case type, title, url, description, age, language
+    case thumbnail
+    case clusterId = "cluster_id"
+    case extraSnippets = "extra_snippets"
+    case metaURL = "meta_url"
+    case isSourceLocal = "is_source_local"
+    case isSourceBoth = "is_source_both"
+    case familyFriendly = "family_friendly"
+  }
+}
+
+struct MixedResults: Codable {
+  let type: String
+  let main: [MixedMainResult]?
+  let top: [MixedMainResult]?
+  let side: [MixedMainResult]?
+}
+
+struct MixedMainResult: Codable {
+  let type: String
+  let index: Int?
+  let all: Bool?
+}
+
+struct WebResults: Codable {
+  let type: String
+  let results: [WebResult]
+  let mixed: [MixedResult]?
+}
+
+struct VideoResults: Codable {
+  let type: String
+  let results: [VideoResult]
 }
 
 struct BraveSearchResponse: Codable {
   let type: String
-  let web: WebSearchResults?
+  let web: WebResults?
   let query: QueryInfo?
   let mixed: MixedResults?
-  let videos: VideosResults?
-
-  struct WebSearchResults: Codable {
-    let type: String
-    let results: [WebResult]
-    let mixed: [MixedResult]?
-  }
-
-  struct MixedResults: Codable {
-    let type: String
-    let main: [MixedMainResult]?
-    let top: [MixedMainResult]?
-    let side: [MixedMainResult]?
-  }
-
-  struct MixedMainResult: Codable {
-    let type: String
-    let index: Int?
-    let all: Bool?
-  }
-
-  struct VideosResults: Codable {
-    let type: String
-    let results: [VideoResult]
-  }
+  let videos: VideoResults?
 }
 
 struct BraveNewsResponse: Codable {
@@ -164,9 +195,16 @@ struct BraveNewsResponse: Codable {
     let url: String
     let description: String
     let age: String?
-    let page_age: String?
-    let meta_url: MetaURL?
+    let pageAge: String?
+    let metaURL: MetaURL?
     let thumbnail: Thumbnail?
+
+    enum CodingKeys: String, CodingKey {
+      case type, title, url, description, age
+      case pageAge = "page_age"
+      case metaURL = "meta_url"
+      case thumbnail
+    }
   }
 }
 
@@ -180,10 +218,10 @@ struct BraveImagesResponse: Codable {
     let title: String
     let url: String
     let source: String
-    let page_fetched: String?
+    let pageFetched: String?
     let thumbnail: ImageThumbnail
     let properties: ImageProperties
-    let meta_url: MetaURL?
+    let metaURL: MetaURL?
     let confidence: String?
 
     struct ImageThumbnail: Codable {
@@ -198,6 +236,13 @@ struct BraveImagesResponse: Codable {
       let size: Int64?
       let format: String?
       let placeholder: String?
+    }
+
+    enum CodingKeys: String, CodingKey {
+      case type, title, url, source, properties, confidence
+      case pageFetched = "page_fetched"
+      case thumbnail
+      case metaURL = "meta_url"
     }
   }
 }
@@ -231,3 +276,4 @@ struct BraveSpellcheckResponse: Codable {
     let query: String
   }
 }
+

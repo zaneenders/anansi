@@ -1,3 +1,4 @@
+/// Request structure for Gemini API
 struct GeminiRequest: Codable {
   let contents: [Content]
   struct Content: Codable {
@@ -8,6 +9,7 @@ struct GeminiRequest: Codable {
   }
 }
 
+/// Response from Gemini API
 struct GeminiResponse: Codable {
   let candidates: [Candidate]
   struct Candidate: Codable {

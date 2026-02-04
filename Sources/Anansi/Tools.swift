@@ -317,9 +317,9 @@ func createDirectory(path: String) async throws {
   try await fileSystem.createDirectory(at: directoryPath, withIntermediateDirectories: true)
 }
 
-func webSearch(query: String) async throws -> String {
-  guard let apiKey = ProcessInfo.processInfo.environment["BRAVE_AI_SEARCH"]
-  else {
+func webSearch(query: String, apiKey: String? = nil) async throws -> String {
+  let apiKey = apiKey ?? ProcessInfo.processInfo.environment["BRAVE_AI_SEARCH"]
+  guard let apiKey = apiKey else {
     return
       "Brave Search API key not configured. Please set BRAVE_AI_SEARCH in your environment or .env file."
   }
@@ -361,7 +361,7 @@ func webSearch(query: String) async throws -> String {
           formattedResults += "   Age: \(age)\n"
         }
 
-        if let familyFriendly = result.family_friendly {
+        if let familyFriendly = result.familyFriendly {
           formattedResults += "   Family Friendly: \(familyFriendly)\n"
         }
 
@@ -398,7 +398,7 @@ func webSearch(query: String) async throws -> String {
     }
 
     if let queryInfo = searchResponse.query {
-      if queryInfo.more_results_available == true {
+      if queryInfo.moreResultsAvailable == true {
         formattedResults += "\nNote: More results are available."
       }
     }

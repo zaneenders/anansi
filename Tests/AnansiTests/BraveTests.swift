@@ -10,59 +10,51 @@ import Testing
 @Suite(.serialized) struct BraveTests {
 
   @Test func search() async throws {
-    let config = try await ConfigReader(
-      provider: EnvironmentVariablesProvider(environmentFilePath: ".env"))
-
-    guard let apiKey = config.string(forKey: "BRAVE_AI_SEARCH") else {
-      Issue.record(
-        "BRAVE_AI_SEARCH api key missing"
-      )
-      return
-    }
+    let config = try await TestHelpers.loadConfig()
+    let apiKey = try TestHelpers.requireAPIKey("BRAVE_AI_SEARCH", from: config)
 
     let testQuery = "Swift programming language"
     let encodedQuery =
       testQuery.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? testQuery
     let searchURL = "https://api.search.brave.com/res/v1/web/search?q=\(encodedQuery)"
 
-    var request = HTTPClientRequest(url: searchURL)
-    request.method = .GET
-    request.headers.add(name: "User-Agent", value: "Anansi")
-    request.headers.add(name: "Accept", value: "application/json")
-    request.headers.add(name: "X-Subscription-Token", value: apiKey)
+    let request = TestHelpers.makeGETRequest(
+      url: searchURL,
+      headers: ["X-Subscription-Token": apiKey]
+    )
 
     do {
-      let response = try await HTTPClient.shared.execute(request, timeout: .seconds(30))
-      let body = try await response.body.collect(upTo: .max)
-      let data = Data(buffer: body)
+      let searchResponse = try await TestHelpers.executeRequest(
+        request,
+        responseType: BraveSearchResponse.self
+      )
 
-      #expect(response.status == .ok)
+      #expect(searchResponse.type == "search")
 
-      do {
-        let decoder = JSONDecoder()
-        let searchResponse = try decoder.decode(BraveSearchResponse.self, from: data)
+      if let webResults = searchResponse.web {
+        #expect(!webResults.results.isEmpty)
 
-        #expect(searchResponse.type == "search")
+        let firstResult = webResults.results.first!
+        #expect(!firstResult.title.isEmpty)
+        #expect(!firstResult.url.isEmpty)
 
-        if let webResults = searchResponse.web {
-          #expect(!webResults.results.isEmpty)
+      } else if let videosResults = searchResponse.videos {
+        #expect(!videosResults.results.isEmpty)
 
-          let firstResult = webResults.results.first!
-          #expect(!firstResult.title.isEmpty)
-          #expect(!firstResult.url.isEmpty)
-
-        } else if let videosResults = searchResponse.videos {
-          #expect(!videosResults.results.isEmpty)
-
-          let firstResult = videosResults.results.first!
-          #expect(!firstResult.title.isEmpty)
-          #expect(!firstResult.url.isEmpty)
-        }
-      } catch let decodingError as DecodingError {
-        Issue.record("Failed to decode search response: \(decodingError.localizedDescription)")
-      } catch {
-        Issue.record("Brave Search API request failed: \(error.localizedDescription)")
+        let firstResult = videosResults.results.first!
+        #expect(!firstResult.title.isEmpty)
+        #expect(!firstResult.url.isEmpty)
       }
+    } catch TestError.httpError(let message) where message.contains("429") {
+      // Skip test gracefully if hitting rate limits
+      print("Skipping BraveTests.search - API rate limit: \(message)")
+    } catch TestError.decodingError {
+      Issue.record("Failed to decode search response")
+    } catch {
+      Issue.record("Brave Search API request failed")
     }
+    
+    // Add 1-second delay to avoid rate limits
+    try await Task.sleep(for: .seconds(1))
   }
 }

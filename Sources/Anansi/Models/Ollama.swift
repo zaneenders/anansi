@@ -1,3 +1,4 @@
+/// Response from Ollama chat completion API
 public struct OllamaChatResponse: Codable, Sendable {
   let model: String
   let createdAt: String
@@ -38,6 +39,7 @@ public struct OllamaChatResponse: Codable, Sendable {
   }
 }
 
+/// Configuration options for Ollama requests
 public struct OllamaOptions: Codable, Sendable {
   let seed: Int
   init(_ seed: Int = 42069) {
@@ -45,6 +47,7 @@ public struct OllamaOptions: Codable, Sendable {
   }
 }
 
+/// Request structure for Ollama chat completion API
 public struct OllamaChatRequest: Codable, Sendable {
   let model: String
   let options: OllamaOptions
@@ -99,6 +102,7 @@ public struct OllamaToolCallFunction: Codable, Sendable {
   let arguments: [String: String]
 }
 
+/// Message role in chat conversation
 public enum Role: Codable, Sendable {
   case system
   case user
@@ -140,6 +144,7 @@ public enum Role: Codable, Sendable {
   }
 }
 
+/// Message in Ollama chat conversation
 public struct OllamaMessage: Codable, Sendable {
   let role: Role
   var content: String
