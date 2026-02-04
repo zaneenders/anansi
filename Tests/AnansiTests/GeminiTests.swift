@@ -32,38 +32,39 @@ import Testing
   do {
     let response = try await HTTPClient.shared.execute(request, timeout: .seconds(30))
     let body = try await response.body.collect(upTo: .max)
-    let jsonString = String(buffer: body)
+    let data = Data(buffer: body)
 
     #expect(response.status == .ok)
 
-    guard let data = jsonString.data(using: .utf8) else {
-      Issue.record("Failed to encode response as UTF-8")
-      return
-    }
+    do {
+      let decoder = JSONDecoder()
+      let searchResponse = try decoder.decode(BraveSearchResponse.self, from: data)
 
-    guard let searchResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-      let web = searchResponse["web"] as? [String: Any],
-      let results = web["results"] as? [[String: Any]]
-    else {
-      Issue.record("Failed to parse search response")
-      return
-    }
+      #expect(searchResponse.type == "search", "Response should be search type")
 
-    #expect(!results.isEmpty, "Search should return results")
+      if let webResults = searchResponse.web {
+        print("✅ Found web results: \(webResults.results.count)")
+        #expect(!webResults.results.isEmpty, "Should have web results")
 
-    if let firstResult = results.first {
-      let title = firstResult["title"] as? String ?? ""
-      let url = firstResult["url"] as? String ?? ""
-      #expect(!title.isEmpty, "First result should have a title")
-      #expect(!url.isEmpty, "First result should have a URL")
-      print("✅ Brave Search API test passed - Found \(results.count) results")
-      for result in results {
-        print(result)
+        let firstResult = webResults.results.first!
+        #expect(!firstResult.title.isEmpty, "First result should have title")
+        #expect(!firstResult.url.isEmpty, "First result should have URL")
+        print("✅ First web result: \(firstResult.title)")
+
+      } else if let videosResults = searchResponse.videos {
+        print("✅ Found video results: \(videosResults.results.count)")
+        #expect(!videosResults.results.isEmpty, "Should have video results")
+
+        let firstResult = videosResults.results.first!
+        #expect(!firstResult.title.isEmpty, "First result should have title")
+        #expect(!firstResult.url.isEmpty, "First result should have URL")
+        print("✅ First video result: \(firstResult.title)")
       }
+    } catch let decodingError as DecodingError {
+      Issue.record("Failed to decode search response: \(decodingError.localizedDescription)")
+    } catch {
+      Issue.record("Brave Search API request failed: \(error.localizedDescription)")
     }
-
-  } catch {
-    Issue.record("Brave Search API request failed: \(error.localizedDescription)")
   }
 }
 
@@ -112,3 +113,4 @@ import Testing
     Issue.record("No response text from Gemini")
   }
 }
+

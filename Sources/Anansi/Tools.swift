@@ -318,10 +318,10 @@ func createDirectory(path: String) async throws {
 }
 
 func webSearch(query: String) async throws -> String {
-  guard let apiKey = ProcessInfo.processInfo.environment["BRAVE_API_KEY"]
+  guard let apiKey = ProcessInfo.processInfo.environment["BRAVE_AI_SEARCH"]
   else {
     return
-      "Brave Search API key not configured. Please set BRAVE_API_KEY in your environment or .env file."
+      "Brave Search API key not configured. Please set BRAVE_AI_SEARCH in your environment or .env file."
   }
 
   let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
@@ -336,37 +336,77 @@ func webSearch(query: String) async throws -> String {
   do {
     let response = try await HTTPClient.shared.execute(request, timeout: .seconds(30))
     let body = try await response.body.collect(upTo: .max)
-    let jsonString = String(buffer: body)
+    let data = Data(buffer: body)
 
     guard (200...299).contains(response.status.code) else {
       return "Search failed with HTTP status: \(response.status)"
     }
 
-    guard let data = jsonString.data(using: .utf8) else {
-      return "Failed to encode response as UTF-8"
-    }
-
-    guard let searchResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-      let web = searchResponse["web"] as? [String: Any],
-      let results = web["results"] as? [[String: Any]]
-    else {
-      return "Failed to parse search response"
-    }
+    let decoder = JSONDecoder()
+    let searchResponse = try decoder.decode(BraveSearchResponse.self, from: data)
 
     var formattedResults = "Search results for '\(query)':\n\n"
+    var resultCount = 0
 
-    for (index, result) in results.prefix(5).enumerated() {
-      let title = result["title"] as? String ?? "No title"
-      let url = result["url"] as? String ?? "No URL"
-      let description = result["description"] as? String ?? "No description"
+    if let webResults = searchResponse.web {
+      for (index, result) in webResults.results.prefix(5).enumerated() {
+        formattedResults += "\(index + 1). \(result.title)\n"
+        formattedResults += "   URL: \(result.url)\n"
 
-      formattedResults += "\(index + 1). \(title)\n"
-      formattedResults += "   URL: \(url)\n"
-      formattedResults += "   \(description)\n\n"
+        if let language = result.language {
+          formattedResults += "   Language: \(language)\n"
+        }
+
+        if let age = result.age {
+          formattedResults += "   Age: \(age)\n"
+        }
+
+        if let familyFriendly = result.family_friendly {
+          formattedResults += "   Family Friendly: \(familyFriendly)\n"
+        }
+
+        formattedResults += "   \(result.description)\n\n"
+        resultCount += 1
+      }
     }
 
-    return formattedResults.isEmpty ? "No results found for '\(query)'" : formattedResults
+    else if let videoResults = searchResponse.videos {
+      for (index, result) in videoResults.results.prefix(5).enumerated() {
+        formattedResults += "\(index + 1). \(result.title)\n"
+        formattedResults += "   URL: \(result.url)\n"
+        formattedResults += "   Type: Video\n"
 
+        if let duration = result.video.duration {
+          formattedResults += "   Duration: \(duration)\n"
+        }
+
+        if let views = result.video.views {
+          formattedResults += "   Views: \(views)\n"
+        }
+
+        if let creator = result.video.creator {
+          formattedResults += "   Creator: \(creator)\n"
+        }
+
+        if let age = result.age {
+          formattedResults += "   Age: \(age)\n"
+        }
+
+        formattedResults += "   \(result.description ?? "No description")\n\n"
+        resultCount += 1
+      }
+    }
+
+    if let queryInfo = searchResponse.query {
+      if queryInfo.more_results_available == true {
+        formattedResults += "\nNote: More results are available."
+      }
+    }
+
+    return resultCount == 0 ? "No results found for '\(query)'" : formattedResults
+
+  } catch let decodingError as DecodingError {
+    return "Failed to decode search response: \(decodingError.localizedDescription)"
   } catch {
     return "Error performing web search: \(error.localizedDescription)"
   }

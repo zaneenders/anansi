@@ -12,6 +12,7 @@ A Swift-based chat agent with tool support and observation capabilities.
 ```.env
 GEMINI_API_KEY=...
 OLLAMA_ENDPOINT=http://localhost:11434
+BRAVE_AI_SEARCH=...
 ```
 
 ## TODO
