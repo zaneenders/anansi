@@ -68,11 +68,4 @@ import Testing
 
     try await Task.sleep(for: .seconds(1))
   }
-
-  @Test func webSearchToolTestWithMissingAPIKey() async throws {
-    let result = try await webSearch(query: "test query", apiKey: nil as String?)
-    #expect(result.contains("API key not configured"))
-
-    try await Task.sleep(for: .seconds(1))
-  }
 }

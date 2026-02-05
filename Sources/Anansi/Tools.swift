@@ -123,7 +123,6 @@ public let ollamaTools = [
       )
     )
   ),
-  /*
   OllamaTool(
     type: "function",
     function: OllamaFunction(
@@ -141,10 +140,9 @@ public let ollamaTools = [
       )
     )
   ),
- */
 ]
 
-func executeTool(_ toolCall: OllamaToolCall) async -> String {
+func executeTool(_ toolCall: OllamaToolCall, braveApiKey: String? = nil) async -> String {
   switch toolCall.function.name {
   case "read_file":
     guard let filePath = toolCall.function.arguments["file_path"] else {
@@ -217,18 +215,16 @@ func executeTool(_ toolCall: OllamaToolCall) async -> String {
     } catch {
       return "Error creating directory: \(error.localizedDescription)"
     }
-  /*
   case "web_search":
-    guard let query = toolCall.function.arguments["query"] else {
-      return "Missing query in arguments"
+    guard let query = toolCall.function.arguments["query"], let braveApiKey else {
+      return "Missing query in arguments, or api key"
     }
     do {
-      let result = try await webSearch(query: query)
+      let result = try await webSearch(query: query, apiKey: braveApiKey)
       return result
     } catch {
       return "Error performing web search: \(error.localizedDescription)"
     }
-  */
   default:
     return "Unknown tool: \(toolCall.function.name)"
   }
@@ -317,13 +313,7 @@ func createDirectory(path: String) async throws {
   try await fileSystem.createDirectory(at: directoryPath, withIntermediateDirectories: true)
 }
 
-func webSearch(query: String, apiKey: String? = nil) async throws -> String {
-  let apiKey = apiKey ?? ProcessInfo.processInfo.environment["BRAVE_AI_SEARCH"]
-  guard let apiKey = apiKey else {
-    return
-      "Brave Search API key not configured. Please set BRAVE_AI_SEARCH in your environment or .env file."
-  }
-
+func webSearch(query: String, apiKey: String) async throws -> String {
   let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
   let searchURL = "https://api.search.brave.com/res/v1/web/search?q=\(encodedQuery)"
 

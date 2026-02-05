@@ -9,16 +9,19 @@ import Subprocess
 public actor Agent {
   let model = "glm-4.7-flash"
   let endpoint: String
+  let braveApiKey: String
   let encoder = JSONEncoder()
   let decoder = JSONDecoder()
   var messages: [OllamaMessage] = []
 
   public init(
     endpoint: String,
+    braveApiKey: String,
     systemPrompt: String? = nil,
     messages: [OllamaMessage] = []
   ) {
     self.endpoint = endpoint
+    self.braveApiKey = braveApiKey
     self.messages = messages
 
     if let systemPrompt = systemPrompt {
@@ -59,7 +62,7 @@ public actor Agent {
                 }
               }
               madeToolCalls = true
-              let result = await executeTool(toolCall)
+              let result = await executeTool(toolCall, braveApiKey: braveApiKey)
               messages.append(
                 OllamaMessage(
                   role: .tool, content: result, toolCalls: nil, toolCallId: toolCall.id))
