@@ -56,6 +56,19 @@ public let ollamaTools = [
   OllamaTool(
     type: "function",
     function: OllamaFunction(
+      name: "get_current_date",
+      description:
+        "Get the current date in YY-MM-DD HH:mm:ss format (e.g., 26-02-04 14:30:22). Use this when user asks about 'today', 'what happened today', or when you need the current date for searches or time-sensitive queries.",
+      parameters: OllamaParameters(
+        type: "object",
+        properties: [:],
+        required: []
+      )
+    )
+  ),
+  OllamaTool(
+    type: "function",
+    function: OllamaFunction(
       name: "edit_file",
       description: """
         Make edits to a text file. Replaces 'old_str' with 'new_str' in the given file. 
@@ -173,6 +186,13 @@ func executeTool(_ toolCall: OllamaToolCall, braveApiKey: String? = nil) async -
     } catch {
       return "Error getting current directory: \(error.localizedDescription)"
     }
+  case "get_current_date":
+    do {
+      let result = try await getCurrentDate()
+      return result
+    } catch {
+      return "Error getting current date: \(error.localizedDescription)"
+    }
   case "edit_file":
     guard let path = toolCall.function.arguments["path"],
       let oldStr = toolCall.function.arguments["old_str"],
@@ -251,6 +271,14 @@ func listDirectory(path: String = ".") async throws -> String {
 func getCurrentDirectory() async throws -> String {
   let fileSystem = FileSystem.shared
   return try await fileSystem.currentWorkingDirectory.string
+}
+
+func getCurrentDate() -> String {
+  let dateFormatter = DateFormatter()
+  dateFormatter.dateFormat = "yy-MM-dd HH:mm:ss"
+  dateFormatter.timeZone = Calendar.current.timeZone
+  print(Calendar.current.timeZone)
+  return dateFormatter.string(from: Date())
 }
 
 func editFile(path: String, oldStr: String, newStr: String) async throws -> String {

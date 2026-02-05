@@ -168,4 +168,9 @@ class ToolsTests {
       Issue.record("Expected AnansiError but got: \(error)")
     }
   }
+
+  @Test func getTime() {
+    let time = getCurrentDate()
+    #expect(time.count > 0)
+  }
 }
