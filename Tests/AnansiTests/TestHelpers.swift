@@ -79,11 +79,8 @@ struct TestHelpers {
   }
 }
 
-// MARK: - Test Error Types
-
 enum TestError: Error {
   case missingAPIKey(String)
   case httpError(String)
   case decodingError(DecodingError)
 }
-

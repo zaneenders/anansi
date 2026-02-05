@@ -168,38 +168,4 @@ class ToolsTests {
       Issue.record("Expected AnansiError but got: \(error)")
     }
   }
-
-  @Test func webSearchToolTest() async throws {
-    do {
-      let config = try await TestHelpers.loadConfig()
-      let apiKey = try TestHelpers.requireAPIKey("BRAVE_AI_SEARCH", from: config)
-
-      let result = try await webSearch(query: "Swift programming", apiKey: apiKey)
-
-      if result.contains("HTTP status") || result.contains("Error") {
-        print("Skipping webSearchToolTest - API rate limit or error: \(result)")
-        return
-      }
-
-      #expect(!result.isEmpty)
-      #expect(result.contains("Search results for 'Swift programming'"))
-      #expect(result.contains("URL:"))
-
-      let lines = result.components(separatedBy: .newlines)
-      let resultLines = lines.filter { $0.contains(".") && $0.contains("URL:") }
-      #expect(resultLines.count > 0)
-    } catch TestError.missingAPIKey {
-      print("Skipping webSearchToolTest - API key not configured")
-    }
-
-    try await Task.sleep(for: .seconds(1))
-  }
-
-  @Test func webSearchToolTestWithMissingAPIKey() async throws {
-    let result = try await webSearch(query: "test query", apiKey: nil as String?)
-    #expect(result.contains("API key not configured"))
-
-    try await Task.sleep(for: .seconds(1))
-  }
-
 }

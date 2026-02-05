@@ -8,7 +8,6 @@ import Testing
 @testable import Anansi
 
 @Suite(.serialized) struct BraveTests {
-
   @Test func search() async throws {
     let config = try await TestHelpers.loadConfig()
     let apiKey = try TestHelpers.requireAPIKey("BRAVE_AI_SEARCH", from: config)
@@ -23,38 +22,57 @@ import Testing
       headers: ["X-Subscription-Token": apiKey]
     )
 
-    do {
-      let searchResponse = try await TestHelpers.executeRequest(
-        request,
-        responseType: BraveSearchResponse.self
-      )
+    let searchResponse = try await TestHelpers.executeRequest(
+      request,
+      responseType: BraveSearchResponse.self
+    )
 
-      #expect(searchResponse.type == "search")
+    #expect(searchResponse.type == "search")
 
-      if let webResults = searchResponse.web {
-        #expect(!webResults.results.isEmpty)
+    if let webResults = searchResponse.web {
+      #expect(!webResults.results.isEmpty)
 
-        let firstResult = webResults.results.first!
-        #expect(!firstResult.title.isEmpty)
-        #expect(!firstResult.url.isEmpty)
+      let firstResult = webResults.results.first!
+      #expect(!firstResult.title.isEmpty)
+      #expect(!firstResult.url.isEmpty)
 
-      } else if let videosResults = searchResponse.videos {
-        #expect(!videosResults.results.isEmpty)
+    } else if let videosResults = searchResponse.videos {
+      #expect(!videosResults.results.isEmpty)
 
-        let firstResult = videosResults.results.first!
-        #expect(!firstResult.title.isEmpty)
-        #expect(!firstResult.url.isEmpty)
-      }
-    } catch TestError.httpError(let message) where message.contains("429") {
-      // Skip test gracefully if hitting rate limits
-      print("Skipping BraveTests.search - API rate limit: \(message)")
-    } catch TestError.decodingError {
-      Issue.record("Failed to decode search response")
-    } catch {
-      Issue.record("Brave Search API request failed")
+      let firstResult = videosResults.results.first!
+      #expect(!firstResult.title.isEmpty)
+      #expect(!firstResult.url.isEmpty)
     }
-    
-    // Add 1-second delay to avoid rate limits
+
+    try await Task.sleep(for: .seconds(1))
+  }
+
+  @Test func webSearchToolTest() async throws {
+    let config = try await TestHelpers.loadConfig()
+    let apiKey = try TestHelpers.requireAPIKey("BRAVE_AI_SEARCH", from: config)
+
+    let result = try await webSearch(query: "Swift programming", apiKey: apiKey)
+
+    if result.contains("HTTP status") || result.contains("Error") {
+      print("Skipping webSearchToolTest - API rate limit or error: \(result)")
+      return
+    }
+
+    #expect(!result.isEmpty)
+    #expect(result.contains("Search results for 'Swift programming'"))
+    #expect(result.contains("URL:"))
+
+    let lines = result.components(separatedBy: .newlines)
+    let resultLines = lines.filter { $0.contains(".") && $0.contains("URL:") }
+    #expect(resultLines.count > 0)
+
+    try await Task.sleep(for: .seconds(1))
+  }
+
+  @Test func webSearchToolTestWithMissingAPIKey() async throws {
+    let result = try await webSearch(query: "test query", apiKey: nil as String?)
+    #expect(result.contains("API key not configured"))
+
     try await Task.sleep(for: .seconds(1))
   }
 }
