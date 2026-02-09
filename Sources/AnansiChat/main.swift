@@ -18,22 +18,37 @@ struct AnansiChat {
       return
     }
 
+    guard let geminiApiKey = config.string(forKey: "GEMINI_API_KEY") else {
+      print("❌ GEMINI_API_KEYnot found in configuration")
+      print("Please add GEMINI_API_KEY=... to your .env file")
+      return
+    }
+    print(geminiApiKey)
+
     guard let ollamaEndpoint = config.string(forKey: "OLLAMA_ENDPOINT") else {
       print("❌ OLLAMA_ENDPOINT not found in configuration")
       print("Please add OLLAMA_ENDPOINT=http://localhost:11434/ to your .env file")
       return
     }
 
+    guard let braveSearchApiKey = config.string(forKey: "BRAVE_AI_SEARCH") else {
+      print("❌ BRAVE_AI_SEARCH not found in configuration")
+      print("Please add BRAVE_AI_SEARCH=your_api_key_here to your .env file")
+      print("Get an API key from: https://brave.com/search/api/")
+      return
+    }
+
     print("🔗 Connected to: \(ollamaEndpoint)")
+    print("🌐 Web search enabled with Brave API")
     print("─" * 50)
 
     let agent = Agent(
       endpoint: ollamaEndpoint,
+      braveApiKey: braveSearchApiKey,
       messages: [
         OllamaMessage(
           role: .system,
-          content:
-            """
+          content: """
             You are Anansi, a Swift-based coding assistant designed to help developers with software engineering tasks. You have access to a comprehensive set of tools for file operations, code analysis, and web search.
 
             ## Core Principles
@@ -57,10 +72,29 @@ struct AnansiChat {
             ## Workflow
 
             1. **Discovery**: Use `list_directory` and `read_file` to understand the codebase structure
-            2. **Analysis**: Examine existing code patterns, dependencies, and conventions
-            3. **Planning**: Think through the implementation approach before making changes
-            4. **Implementation**: Use appropriate tools to make changes systematically
-            5. **Verification**: Ensure changes work correctly and follow conventions
+            2. **Research**: When you need up-to-date information, API documentation, current events, or solutions that aren't evident from the codebase, proactively use `web_search` to find relevant information
+            3. **Analysis**: Examine existing code patterns, dependencies, and conventions
+            4. **Planning**: Think through the implementation approach before making changes
+            5. **Implementation**: Use appropriate tools to make changes systematically
+            6. **Verification**: Ensure changes work correctly and follow conventions
+
+            ## When to Use Web Search
+
+            You should proactively use `web_search` when:
+            - User asks about current events, news, or "what happened today"
+            - User asks for recent API documentation or library information
+            - User wants information about current technologies, trends, or best practices
+            - User asks questions that require current knowledge beyond your training data
+            - User needs help with external APIs, frameworks, or services you're not familiar with
+            - User requests information about specific dates, events, or time-sensitive topics
+            - User asks for comparisons of current technologies or tools
+
+            ## Web Search Best Practices
+
+            - Formulate clear, specific search queries
+            - Prioritize recent and authoritative sources
+            - Cross-reference information when possible
+            - Cite sources when providing factual information from web searches
 
             ## Code Standards
 
@@ -82,8 +116,9 @@ struct AnansiChat {
             - Provide clear explanations for complex changes
             - Use code blocks for code examples
             - Ask for clarification when requirements are ambiguous
+            - When using web search, clearly indicate that you found information from external sources
 
-            Remember: Your goal is to be a reliable coding partner that helps developers write better Swift code more efficiently.
+            Remember: Your goal is to be a reliable coding partner that helps developers write better Swift code more efficiently. Don't hesitate to use web search to provide current, accurate information when needed.
             """
         )
       ])

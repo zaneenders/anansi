@@ -1,3 +1,4 @@
+/// Response from Ollama chat completion API
 public struct OllamaChatResponse: Codable, Sendable {
   let model: String
   let createdAt: String
@@ -38,6 +39,7 @@ public struct OllamaChatResponse: Codable, Sendable {
   }
 }
 
+/// Configuration options for Ollama requests
 public struct OllamaOptions: Codable, Sendable {
   let seed: Int
   init(_ seed: Int = 42069) {
@@ -45,6 +47,7 @@ public struct OllamaOptions: Codable, Sendable {
   }
 }
 
+/// Request structure for Ollama chat completion API
 public struct OllamaChatRequest: Codable, Sendable {
   let model: String
   let options: OllamaOptions
@@ -99,6 +102,7 @@ public struct OllamaToolCallFunction: Codable, Sendable {
   let arguments: [String: String]
 }
 
+/// Message role in chat conversation
 public enum Role: Codable, Sendable {
   case system
   case user
@@ -140,6 +144,7 @@ public enum Role: Codable, Sendable {
   }
 }
 
+/// Message in Ollama chat conversation
 public struct OllamaMessage: Codable, Sendable {
   let role: Role
   var content: String
@@ -157,122 +162,13 @@ public struct OllamaMessage: Codable, Sendable {
 
   public init(
     role: Role, content: String,
-        toolCalls: [OllamaToolCall]? = nil, toolCallId: String? = nil,
-    thinking: String? = nil) {
+    toolCalls: [OllamaToolCall]? = nil, toolCallId: String? = nil,
+    thinking: String? = nil
+  ) {
     self.role = role
     self.content = content
     self.toolCalls = toolCalls
     self.toolCallId = toolCallId
     self.thinking = thinking
-  }
-}
-
-public enum OllamaModel: Codable, CustomStringConvertible, Sendable {
-  case llama(Llama)
-  case gemma3(Gemma3)
-  case gemma3n(Gemma3n)
-  public var inputs: [Input] {
-    switch self {
-    case .llama(let model):
-      model.inputs
-    case .gemma3(let model):
-      model.inputs
-    case .gemma3n(let model):
-      model.inputs
-    }
-  }
-  public var description: String {
-    switch self {
-    case .llama(let model):
-      model.description
-    case .gemma3(let model):
-      model.description
-    case .gemma3n(let model):
-      model.description
-    }
-  }
-}
-
-public enum Input: Codable, CustomStringConvertible, Sendable {
-  case text
-  case image
-
-  public var description: String {
-    switch self {
-    case .text:
-      return "text"
-    case .image:
-      return "image"
-    }
-  }
-}
-
-public enum Gemma3n: Codable, CustomStringConvertible, Sendable {
-  case e2b
-  public var description: String {
-    var out = "gemma3n:"
-    switch self {
-    case .e2b:
-      out += "e2b"
-    }
-    return out
-  }
-  var inputs: [Input] {
-    switch self {
-    case .e2b:
-      return [.text, .image]
-    }
-  }
-}
-
-public enum Llama: Codable, Sendable, CustomStringConvertible {
-  case llama3_1_8b
-  public var description: String {
-    switch self {
-    case .llama3_1_8b:
-      return "llama3.1:8b"
-    }
-  }
-
-  var inputs: [Input] {
-    switch self {
-    case .llama3_1_8b:
-      return [.text, .image]
-    }
-  }
-}
-
-public enum Gemma3: Codable, CustomStringConvertible, Sendable {
-
-  case b1
-  case b4
-  case latest
-  case b12
-  case b27
-
-  public var description: String {
-    var out = "gemma3:"
-    switch self {
-    case .b1:
-      out += "1b"
-    case .b4:
-      out += "4b"
-    case .latest:
-      out += "latest"
-    case .b12:
-      out += "12b"
-    case .b27:
-      out += "27b"
-    }
-    return out
-  }
-
-  var inputs: [Input] {
-    switch self {
-    case .b1:
-      return [.text]
-    case .b4, .latest, .b12, .b27:
-      return [.text, .image]
-    }
   }
 }

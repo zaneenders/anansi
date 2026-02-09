@@ -56,6 +56,19 @@ public let ollamaTools = [
   OllamaTool(
     type: "function",
     function: OllamaFunction(
+      name: "get_current_date",
+      description:
+        "Get the current date in YY-MM-DD HH:mm:ss format (e.g., 26-02-04 14:30:22). Use this when user asks about 'today', 'what happened today', or when you need the current date for searches or time-sensitive queries.",
+      parameters: OllamaParameters(
+        type: "object",
+        properties: [:],
+        required: []
+      )
+    )
+  ),
+  OllamaTool(
+    type: "function",
+    function: OllamaFunction(
       name: "edit_file",
       description: """
         Make edits to a text file. Replaces 'old_str' with 'new_str' in the given file. 
@@ -123,7 +136,6 @@ public let ollamaTools = [
       )
     )
   ),
-  /*
   OllamaTool(
     type: "function",
     function: OllamaFunction(
@@ -141,10 +153,9 @@ public let ollamaTools = [
       )
     )
   ),
- */
 ]
 
-func executeTool(_ toolCall: OllamaToolCall) async -> String {
+func executeTool(_ toolCall: OllamaToolCall, braveApiKey: String? = nil) async -> String {
   switch toolCall.function.name {
   case "read_file":
     guard let filePath = toolCall.function.arguments["file_path"] else {
@@ -174,6 +185,13 @@ func executeTool(_ toolCall: OllamaToolCall) async -> String {
       return result
     } catch {
       return "Error getting current directory: \(error.localizedDescription)"
+    }
+  case "get_current_date":
+    do {
+      let result = try await getCurrentDate()
+      return result
+    } catch {
+      return "Error getting current date: \(error.localizedDescription)"
     }
   case "edit_file":
     guard let path = toolCall.function.arguments["path"],
@@ -217,18 +235,16 @@ func executeTool(_ toolCall: OllamaToolCall) async -> String {
     } catch {
       return "Error creating directory: \(error.localizedDescription)"
     }
-  /*
   case "web_search":
-    guard let query = toolCall.function.arguments["query"] else {
-      return "Missing query in arguments"
+    guard let query = toolCall.function.arguments["query"], let braveApiKey else {
+      return "Missing query in arguments, or api key"
     }
     do {
-      let result = try await webSearch(query: query)
+      let result = try await webSearch(query: query, apiKey: braveApiKey)
       return result
     } catch {
       return "Error performing web search: \(error.localizedDescription)"
     }
-  */
   default:
     return "Unknown tool: \(toolCall.function.name)"
   }
@@ -255,6 +271,14 @@ func listDirectory(path: String = ".") async throws -> String {
 func getCurrentDirectory() async throws -> String {
   let fileSystem = FileSystem.shared
   return try await fileSystem.currentWorkingDirectory.string
+}
+
+func getCurrentDate() -> String {
+  let dateFormatter = DateFormatter()
+  dateFormatter.dateFormat = "yy-MM-dd HH:mm:ss"
+  dateFormatter.timeZone = Calendar.current.timeZone
+  print(Calendar.current.timeZone)
+  return dateFormatter.string(from: Date())
 }
 
 func editFile(path: String, oldStr: String, newStr: String) async throws -> String {
@@ -317,13 +341,7 @@ func createDirectory(path: String) async throws {
   try await fileSystem.createDirectory(at: directoryPath, withIntermediateDirectories: true)
 }
 
-func webSearch(query: String) async throws -> String {
-  guard let apiKey = ProcessInfo.processInfo.environment["BRAVE_API_KEY"]
-  else {
-    return
-      "Brave Search API key not configured. Please set BRAVE_API_KEY in your environment or .env file."
-  }
-
+func webSearch(query: String, apiKey: String) async throws -> String {
   let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
   let searchURL = "https://api.search.brave.com/res/v1/web/search?q=\(encodedQuery)"
 
@@ -336,37 +354,77 @@ func webSearch(query: String) async throws -> String {
   do {
     let response = try await HTTPClient.shared.execute(request, timeout: .seconds(30))
     let body = try await response.body.collect(upTo: .max)
-    let jsonString = String(buffer: body)
+    let data = Data(buffer: body)
 
     guard (200...299).contains(response.status.code) else {
       return "Search failed with HTTP status: \(response.status)"
     }
 
-    guard let data = jsonString.data(using: .utf8) else {
-      return "Failed to encode response as UTF-8"
-    }
-
-    guard let searchResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-      let web = searchResponse["web"] as? [String: Any],
-      let results = web["results"] as? [[String: Any]]
-    else {
-      return "Failed to parse search response"
-    }
+    let decoder = JSONDecoder()
+    let searchResponse = try decoder.decode(BraveSearchResponse.self, from: data)
 
     var formattedResults = "Search results for '\(query)':\n\n"
+    var resultCount = 0
 
-    for (index, result) in results.prefix(5).enumerated() {
-      let title = result["title"] as? String ?? "No title"
-      let url = result["url"] as? String ?? "No URL"
-      let description = result["description"] as? String ?? "No description"
+    if let webResults = searchResponse.web {
+      for (index, result) in webResults.results.prefix(5).enumerated() {
+        formattedResults += "\(index + 1). \(result.title)\n"
+        formattedResults += "   URL: \(result.url)\n"
 
-      formattedResults += "\(index + 1). \(title)\n"
-      formattedResults += "   URL: \(url)\n"
-      formattedResults += "   \(description)\n\n"
+        if let language = result.language {
+          formattedResults += "   Language: \(language)\n"
+        }
+
+        if let age = result.age {
+          formattedResults += "   Age: \(age)\n"
+        }
+
+        if let familyFriendly = result.familyFriendly {
+          formattedResults += "   Family Friendly: \(familyFriendly)\n"
+        }
+
+        formattedResults += "   \(result.description)\n\n"
+        resultCount += 1
+      }
     }
 
-    return formattedResults.isEmpty ? "No results found for '\(query)'" : formattedResults
+    else if let videoResults = searchResponse.videos {
+      for (index, result) in videoResults.results.prefix(5).enumerated() {
+        formattedResults += "\(index + 1). \(result.title)\n"
+        formattedResults += "   URL: \(result.url)\n"
+        formattedResults += "   Type: Video\n"
 
+        if let duration = result.video.duration {
+          formattedResults += "   Duration: \(duration)\n"
+        }
+
+        if let views = result.video.views {
+          formattedResults += "   Views: \(views)\n"
+        }
+
+        if let creator = result.video.creator {
+          formattedResults += "   Creator: \(creator)\n"
+        }
+
+        if let age = result.age {
+          formattedResults += "   Age: \(age)\n"
+        }
+
+        formattedResults += "   \(result.description ?? "No description")\n\n"
+        resultCount += 1
+      }
+    }
+
+    if let queryInfo = searchResponse.query {
+      if queryInfo.moreResultsAvailable == true {
+        formattedResults += "\nNote: More results are available."
+      }
+    }
+
+    return resultCount == 0 ? "No results found for '\(query)'" : formattedResults
+
+  } catch let decodingError as DecodingError {
+    return "Failed to decode search response: \(decodingError.localizedDescription)"
   } catch {
     return "Error performing web search: \(error.localizedDescription)"
   }
